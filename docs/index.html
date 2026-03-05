@@ -30,15 +30,25 @@
             <p class="section-desc">
                 Best score per model/team. Single-elimination against 6 reference AIs (0-100 scale).
             </p>
+            <div class="toolbar">
+                <input type="text" id="leaderboard-search" class="search-input" placeholder="Search name, grade...">
+                <div class="date-filter">
+                    <label>From</label>
+                    <input type="date" id="leaderboard-date-from" class="date-input">
+                    <label>To</label>
+                    <input type="date" id="leaderboard-date-to" class="date-input">
+                    <button id="leaderboard-date-clear" class="btn-clear" title="Clear date filter">&times;</button>
+                </div>
+            </div>
             <div class="table-container">
-                <table id="leaderboard-table">
+                <table id="leaderboard-table" class="sortable">
                     <thead>
                         <tr>
-                            <th>Rank</th>
-                            <th>Name</th>
-                            <th>Score</th>
-                            <th>Grade</th>
-                            <th>Last Updated</th>
+                            <th data-sort="rank" data-type="number">Rank</th>
+                            <th data-sort="name" data-type="string">Name</th>
+                            <th data-sort="score" data-type="number">Score</th>
+                            <th data-sort="grade" data-type="grade">Grade</th>
+                            <th data-sort="date" data-type="date">Last Updated</th>
                             <th>RandomBiased</th>
                             <th>HeavyRush</th>
                             <th>LightRush</th>
@@ -50,6 +60,7 @@
                     <tbody></tbody>
                 </table>
             </div>
+            <p class="result-count" id="leaderboard-count"></p>
         </section>
 
         <!-- Benchmarks Tab -->
@@ -58,20 +69,31 @@
             <p class="section-desc">
                 All recorded benchmark runs, showing score progression over time.
             </p>
+            <div class="toolbar">
+                <input type="text" id="benchmarks-search" class="search-input" placeholder="Search name, source, grade...">
+                <div class="date-filter">
+                    <label>From</label>
+                    <input type="date" id="benchmarks-date-from" class="date-input">
+                    <label>To</label>
+                    <input type="date" id="benchmarks-date-to" class="date-input">
+                    <button id="benchmarks-date-clear" class="btn-clear" title="Clear date filter">&times;</button>
+                </div>
+            </div>
             <div class="table-container">
-                <table id="benchmarks-table">
+                <table id="benchmarks-table" class="sortable">
                     <thead>
                         <tr>
-                            <th>Name</th>
-                            <th>Score</th>
-                            <th>Grade</th>
-                            <th>Source</th>
-                            <th>Date</th>
+                            <th data-sort="name" data-type="string">Name</th>
+                            <th data-sort="score" data-type="number">Score</th>
+                            <th data-sort="grade" data-type="grade">Grade</th>
+                            <th data-sort="source" data-type="string">Source</th>
+                            <th data-sort="date" data-type="date">Date</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
                 </table>
             </div>
+            <p class="result-count" id="benchmarks-count"></p>
         </section>
 
         <!-- Head-to-Head Tab -->
@@ -97,21 +119,32 @@
             <p class="section-desc">
                 Chronological record of all benchmark and tournament runs.
             </p>
+            <div class="toolbar">
+                <input type="text" id="history-search" class="search-input" placeholder="Search name, source, map...">
+                <div class="date-filter">
+                    <label>From</label>
+                    <input type="date" id="history-date-from" class="date-input">
+                    <label>To</label>
+                    <input type="date" id="history-date-to" class="date-input">
+                    <button id="history-date-clear" class="btn-clear" title="Clear date filter">&times;</button>
+                </div>
+            </div>
             <div class="table-container">
-                <table id="history-table">
+                <table id="history-table" class="sortable">
                     <thead>
                         <tr>
-                            <th>Date</th>
-                            <th>Name</th>
-                            <th>Score</th>
-                            <th>Grade</th>
-                            <th>Source</th>
-                            <th>Map</th>
+                            <th data-sort="date" data-type="date">Date</th>
+                            <th data-sort="name" data-type="string">Name</th>
+                            <th data-sort="score" data-type="number">Score</th>
+                            <th data-sort="grade" data-type="grade">Grade</th>
+                            <th data-sort="source" data-type="string">Source</th>
+                            <th data-sort="map" data-type="string">Map</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
                 </table>
             </div>
+            <p class="result-count" id="history-count"></p>
         </section>
     </main>
 

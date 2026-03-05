@@ -5,6 +5,11 @@
 
     var DATA_URL = 'data/tournament_results.json';
     var ANCHORS = ['RandomBiasedAI', 'HeavyRush', 'LightRush', 'WorkerRush', 'Tiamat', 'CoacAI'];
+    var GRADE_ORDER = { 'A+': 0, 'A': 1, 'B': 2, 'C': 3, 'D': 4, 'F': 5 };
+
+    // Store raw data for filtering/sorting
+    var rawData = null;
+    var sortState = {}; // tableId -> { key, dir }
 
     // Tab switching
     document.querySelectorAll('.tab').forEach(function (tab) {
@@ -106,17 +111,179 @@
         return formatted;
     }
 
-    // Render leaderboard
-    function renderLeaderboard(data) {
+    // Extract YYYY-MM-DD from a date string for comparison
+    function toDateOnly(dateStr) {
+        if (!dateStr) return '';
+        try {
+            return new Date(dateStr).toISOString().substring(0, 10);
+        } catch (e) {
+            return '';
+        }
+    }
+
+    // --- Sorting ---
+
+    function comparator(type) {
+        return function (a, b) {
+            if (type === 'number') {
+                return (parseFloat(a) || 0) - (parseFloat(b) || 0);
+            }
+            if (type === 'date') {
+                var da = a ? new Date(a).getTime() : 0;
+                var db = b ? new Date(b).getTime() : 0;
+                return da - db;
+            }
+            if (type === 'grade') {
+                var ga = GRADE_ORDER[a] != null ? GRADE_ORDER[a] : 99;
+                var gb = GRADE_ORDER[b] != null ? GRADE_ORDER[b] : 99;
+                return ga - gb;
+            }
+            // string
+            return String(a || '').localeCompare(String(b || ''));
+        };
+    }
+
+    function sortEntries(entries, key, type, dir) {
+        var cmp = comparator(type);
+        var sorted = entries.slice();
+        sorted.sort(function (a, b) {
+            var va = a._sortData[key];
+            var vb = b._sortData[key];
+            var result = cmp(va, vb);
+            return dir === 'asc' ? result : -result;
+        });
+        return sorted;
+    }
+
+    function updateSortIndicators(tableId, activeKey, dir) {
+        var table = document.getElementById(tableId);
+        if (!table) return;
+        table.querySelectorAll('th[data-sort]').forEach(function (th) {
+            th.classList.remove('sort-asc', 'sort-desc');
+            if (th.getAttribute('data-sort') === activeKey) {
+                th.classList.add(dir === 'asc' ? 'sort-asc' : 'sort-desc');
+            }
+        });
+    }
+
+    function attachSortHandlers(tableId, renderFn) {
+        var table = document.getElementById(tableId);
+        if (!table) return;
+        table.querySelectorAll('th[data-sort]').forEach(function (th) {
+            th.style.cursor = 'pointer';
+            th.addEventListener('click', function () {
+                var key = this.getAttribute('data-sort');
+                var type = this.getAttribute('data-type') || 'string';
+                var state = sortState[tableId] || {};
+                var dir = (state.key === key && state.dir === 'desc') ? 'asc' : 'desc';
+                sortState[tableId] = { key: key, type: type, dir: dir };
+                updateSortIndicators(tableId, key, dir);
+                renderFn();
+            });
+        });
+    }
+
+    // --- Filtering ---
+
+    function getFilterValues(prefix) {
+        var searchEl = document.getElementById(prefix + '-search');
+        var fromEl = document.getElementById(prefix + '-date-from');
+        var toEl = document.getElementById(prefix + '-date-to');
+        return {
+            search: searchEl ? searchEl.value.toLowerCase().trim() : '',
+            dateFrom: fromEl ? fromEl.value : '',
+            dateTo: toEl ? toEl.value : ''
+        };
+    }
+
+    function matchesSearch(entry, searchStr, fields) {
+        if (!searchStr) return true;
+        for (var i = 0; i < fields.length; i++) {
+            var val = entry._sortData[fields[i]];
+            if (val && String(val).toLowerCase().indexOf(searchStr) !== -1) return true;
+        }
+        return false;
+    }
+
+    function matchesDateRange(dateStr, from, to) {
+        if (!from && !to) return true;
+        var d = toDateOnly(dateStr);
+        if (!d) return !from && !to;
+        if (from && d < from) return false;
+        if (to && d > to) return false;
+        return true;
+    }
+
+    function updateCount(id, shown, total) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        if (shown === total) {
+            el.textContent = total + ' entries';
+        } else {
+            el.textContent = 'Showing ' + shown + ' of ' + total + ' entries';
+        }
+    }
+
+    function attachFilterHandlers(prefix, renderFn) {
+        var ids = [prefix + '-search', prefix + '-date-from', prefix + '-date-to'];
+        ids.forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) el.addEventListener('input', renderFn);
+        });
+        var clearBtn = document.getElementById(prefix + '-date-clear');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', function () {
+                var fromEl = document.getElementById(prefix + '-date-from');
+                var toEl = document.getElementById(prefix + '-date-to');
+                if (fromEl) fromEl.value = '';
+                if (toEl) toEl.value = '';
+                renderFn();
+            });
+        }
+    }
+
+    // --- Render functions ---
+
+    // Leaderboard
+    var leaderboardEntries = [];
+
+    function prepareLeaderboard(data) {
+        leaderboardEntries = (data.leaderboard || []).map(function (entry, i) {
+            return {
+                raw: entry,
+                _sortData: {
+                    rank: i + 1,
+                    name: entry.display_name || '',
+                    score: entry.score,
+                    grade: entry.grade || 'F',
+                    date: entry.last_updated || entry.date || ''
+                }
+            };
+        });
+    }
+
+    function renderLeaderboard() {
         var tbody = document.querySelector('#leaderboard-table tbody');
         if (!tbody) return;
         tbody.innerHTML = '';
 
-        var entries = data.leaderboard || [];
-        entries.forEach(function (entry, i) {
+        var filters = getFilterValues('leaderboard');
+        var entries = leaderboardEntries.filter(function (e) {
+            if (!matchesSearch(e, filters.search, ['name', 'grade'])) return false;
+            if (!matchesDateRange(e._sortData.date, filters.dateFrom, filters.dateTo)) return false;
+            return true;
+        });
+
+        var state = sortState['leaderboard-table'];
+        if (state) {
+            entries = sortEntries(entries, state.key, state.type, state.dir);
+        }
+
+        entries.forEach(function (e, i) {
+            var entry = e.raw;
             var row = document.createElement('tr');
-            var rank = i + 1;
-            var html = '<td class="rank-cell">' + rank + '</td>';
+            var displayRank = state ? (i + 1) : e._sortData.rank;
+            var html = '<td class="rank-cell">' + displayRank + '</td>';
             html += '<td>' + escapeHtml(entry.display_name) + '</td>';
             html += '<td class="score-cell">' + entry.score + '</td>';
             html += '<td>' + gradeBadge(entry.grade) + '</td>';
@@ -129,29 +296,58 @@
             row.innerHTML = html;
             tbody.appendChild(row);
         });
+
+        updateCount('leaderboard-count', entries.length, leaderboardEntries.length);
     }
 
-    // Render benchmarks tab
-    function renderBenchmarks(data) {
-        var tbody = document.querySelector('#benchmarks-table tbody');
-        if (!tbody) return;
-        tbody.innerHTML = '';
+    // Benchmarks
+    var benchmarkEntries = [];
 
+    function prepareBenchmarks(data) {
         var entries = data.history || [];
-        // Deduplicate: show best per name
         var seen = {};
-        var best = [];
         entries.forEach(function (entry) {
             var key = entry.display_name;
             if (!seen[key] || entry.score > seen[key].score) {
                 seen[key] = entry;
             }
         });
-        // Sort by score descending
-        best = Object.values(seen);
+        var best = Object.values(seen);
         best.sort(function (a, b) { return b.score - a.score; });
 
-        best.forEach(function (entry) {
+        benchmarkEntries = best.map(function (entry) {
+            return {
+                raw: entry,
+                _sortData: {
+                    name: entry.display_name || '',
+                    score: entry.score,
+                    grade: entry.grade || 'F',
+                    source: entry.source || 'unknown',
+                    date: entry.date || ''
+                }
+            };
+        });
+    }
+
+    function renderBenchmarks() {
+        var tbody = document.querySelector('#benchmarks-table tbody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        var filters = getFilterValues('benchmarks');
+        var entries = benchmarkEntries.filter(function (e) {
+            if (!matchesSearch(e, filters.search, ['name', 'grade', 'source'])) return false;
+            if (!matchesDateRange(e._sortData.date, filters.dateFrom, filters.dateTo)) return false;
+            return true;
+        });
+
+        var state = sortState['benchmarks-table'];
+        if (state) {
+            entries = sortEntries(entries, state.key, state.type, state.dir);
+        }
+
+        entries.forEach(function (e) {
+            var entry = e.raw;
             var row = document.createElement('tr');
             var src = entry.source || 'unknown';
             row.innerHTML =
@@ -162,9 +358,11 @@
                 '<td>' + formatDate(entry.date) + '</td>';
             tbody.appendChild(row);
         });
+
+        updateCount('benchmarks-count', entries.length, benchmarkEntries.length);
     }
 
-    // Render head-to-head matrix
+    // Head-to-head matrix
     function renderH2H(data) {
         var h2h = data.head_to_head || {};
         var players = Object.keys(h2h).sort();
@@ -178,7 +376,6 @@
         var thead = document.querySelector('#h2h-table thead');
         var tbody = document.querySelector('#h2h-table tbody');
 
-        // Header row
         var headerHtml = '<tr><th></th>';
         players.forEach(function (p) {
             headerHtml += '<th>' + escapeHtml(p.split(' (')[0]) + '</th>';
@@ -186,7 +383,6 @@
         headerHtml += '</tr>';
         thead.innerHTML = headerHtml;
 
-        // Body rows
         tbody.innerHTML = '';
         players.forEach(function (p1) {
             var row = document.createElement('tr');
@@ -214,14 +410,44 @@
         });
     }
 
-    // Render history tab
-    function renderHistory(data) {
+    // History
+    var historyEntries = [];
+
+    function prepareHistory(data) {
+        historyEntries = (data.history || []).map(function (entry) {
+            return {
+                raw: entry,
+                _sortData: {
+                    date: entry.date || '',
+                    name: entry.display_name || '',
+                    score: entry.score,
+                    grade: entry.grade || 'F',
+                    source: entry.source || 'unknown',
+                    map: entry.map || ''
+                }
+            };
+        });
+    }
+
+    function renderHistory() {
         var tbody = document.querySelector('#history-table tbody');
         if (!tbody) return;
         tbody.innerHTML = '';
 
-        var entries = data.history || [];
-        entries.forEach(function (entry) {
+        var filters = getFilterValues('history');
+        var entries = historyEntries.filter(function (e) {
+            if (!matchesSearch(e, filters.search, ['name', 'grade', 'source', 'map'])) return false;
+            if (!matchesDateRange(e._sortData.date, filters.dateFrom, filters.dateTo)) return false;
+            return true;
+        });
+
+        var state = sortState['history-table'];
+        if (state) {
+            entries = sortEntries(entries, state.key, state.type, state.dir);
+        }
+
+        entries.forEach(function (e) {
+            var entry = e.raw;
             var row = document.createElement('tr');
             var src = entry.source || 'unknown';
             row.innerHTML =
@@ -233,19 +459,40 @@
                 '<td>' + escapeHtml(entry.map || '--') + '</td>';
             tbody.appendChild(row);
         });
+
+        updateCount('history-count', entries.length, historyEntries.length);
     }
 
-    // Load data and render
+    // --- Init ---
+
     fetch(DATA_URL)
         .then(function (response) {
             if (!response.ok) throw new Error('Failed to load data: ' + response.status);
             return response.json();
         })
         .then(function (data) {
-            renderLeaderboard(data);
-            renderBenchmarks(data);
+            rawData = data;
+
+            // Prepare data
+            prepareLeaderboard(data);
+            prepareBenchmarks(data);
+            prepareHistory(data);
+
+            // Initial render
+            renderLeaderboard();
+            renderBenchmarks();
             renderH2H(data);
-            renderHistory(data);
+            renderHistory();
+
+            // Attach sort handlers
+            attachSortHandlers('leaderboard-table', renderLeaderboard);
+            attachSortHandlers('benchmarks-table', renderBenchmarks);
+            attachSortHandlers('history-table', renderHistory);
+
+            // Attach filter handlers
+            attachFilterHandlers('leaderboard', renderLeaderboard);
+            attachFilterHandlers('benchmarks', renderBenchmarks);
+            attachFilterHandlers('history', renderHistory);
 
             var genEl = document.getElementById('generated-at');
             if (genEl && data.generated) {

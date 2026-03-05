@@ -123,7 +123,85 @@ h2 {
 .section-desc {
     color: var(--text-secondary);
     font-size: 0.9rem;
-    margin-bottom: 1.25rem;
+    margin-bottom: 1rem;
+}
+
+/* Toolbar: search + date filter */
+.toolbar {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.search-input {
+    flex: 1;
+    min-width: 180px;
+    padding: 0.4rem 0.65rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.search-input:focus {
+    border-color: var(--accent);
+}
+
+.search-input::placeholder {
+    color: var(--text-muted);
+}
+
+.date-filter {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.date-input {
+    padding: 0.35rem 0.5rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 0.8rem;
+    outline: none;
+    color-scheme: dark;
+}
+
+.date-input:focus {
+    border-color: var(--accent);
+}
+
+.btn-clear {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0.3rem 0.55rem;
+    font-size: 0.85rem;
+    line-height: 1;
+    transition: background 0.15s, color 0.15s;
+}
+
+.btn-clear:hover {
+    background: var(--border);
+    color: var(--text-primary);
+}
+
+/* Result count */
+.result-count {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    margin-top: 0.5rem;
+    padding-left: 0.25rem;
 }
 
 /* Tables */
@@ -150,6 +228,39 @@ th {
     color: var(--text-primary);
     border-bottom: 1px solid var(--border);
     white-space: nowrap;
+}
+
+/* Sortable column headers */
+th[data-sort] {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    padding-right: 1.4rem;
+    transition: color 0.15s;
+}
+
+th[data-sort]:hover {
+    color: var(--accent);
+}
+
+th[data-sort]::after {
+    content: '\2195';
+    position: absolute;
+    right: 0.4rem;
+    opacity: 0.3;
+    font-size: 0.75rem;
+}
+
+th[data-sort].sort-asc::after {
+    content: '\2191';
+    opacity: 0.9;
+    color: var(--accent);
+}
+
+th[data-sort].sort-desc::after {
+    content: '\2193';
+    opacity: 0.9;
+    color: var(--accent);
 }
 
 td {
@@ -389,5 +500,18 @@ footer a:hover {
 
     .page-content {
         padding: 1rem;
+    }
+
+    .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .search-input {
+        min-width: 0;
+    }
+
+    .date-filter {
+        flex-wrap: wrap;
     }
 }
