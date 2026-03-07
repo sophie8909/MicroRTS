@@ -259,9 +259,9 @@ def write_config(ai1, ai2, map_location, max_cycles):
     return path
 
 
-def parse_game_result(output):
+def parse_game_result(output, returncode=0):
     """Parse structured output from Game.java."""
-    result = {"winner": None, "final_tick": None, "raw_output": ""}
+    result = {"winner": None, "final_tick": None, "raw_output": "", "error": None}
     # Keep last 50 lines for context
     lines = output.strip().split('\n')
     result["raw_output"] = '\n'.join(lines[-50:])
@@ -290,6 +290,26 @@ def parse_game_result(output):
             result["winner"] = 1
         elif line.startswith("Result: Draw"):
             result["winner"] = -1
+        elif line.startswith("CRASHED: Player"):
+            try:
+                crashed_player = int(line.split("Player")[1].strip())
+                result["crashed"] = crashed_player
+            except (ValueError, IndexError):
+                pass
+        elif line.startswith("ERROR:"):
+            result["error"] = line[6:].strip()
+
+    # Detect failed games: non-zero exit or no result parsed
+    if returncode != 0 and result["winner"] is None:
+        if not result["error"]:
+            # Extract error from output
+            for line in lines:
+                if "Exception" in line or "Error" in line:
+                    result["error"] = line.strip()
+                    break
+            if not result["error"]:
+                result["error"] = f"Game process exited with code {returncode}"
+
     return result
 
 
@@ -325,19 +345,28 @@ def run_match(match_id):
         )
 
         output = proc.stdout + proc.stderr
-        result = parse_game_result(output)
+        result = parse_game_result(output, proc.returncode)
 
         # Check if trace JSON was saved
         trace_json = trace_prefix + ".json"
         has_trace = os.path.exists(trace_json)
 
         with matches_lock:
-            match["status"] = "completed"
+            if result["error"]:
+                match["status"] = "error"
+                match["error"] = result["error"]
+            else:
+                match["status"] = "completed"
             match["completed_at"] = time.time()
             match["duration"] = match["completed_at"] - match["started_at"]
             match["winner"] = result["winner"]
             match["final_tick"] = result["final_tick"]
-            if result["winner"] == 0:
+            if result.get("crashed") is not None:
+                crashed = result["crashed"]
+                match["crashed"] = crashed
+                crash_name = match["ai1_name"] if crashed == 0 else match["ai2_name"]
+                match["winner_label"] = f"{crash_name} crashed"
+            elif result["winner"] == 0:
                 match["winner_label"] = "Player 1 (AI1)"
             elif result["winner"] == 1:
                 match["winner_label"] = "Player 2 (AI2)"

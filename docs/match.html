@@ -946,12 +946,26 @@ python3 tournament/match_server.py --port 8080</code></pre>
 
             if (match.status === 'error') {
                 showError(match.error || 'Unknown error');
+                // Still show game log and add to history so user can debug
+                if (match.game_log) {
+                    logToggle.style.display = '';
+                    gameLog.textContent = match.game_log;
+                    // Auto-show log for errors
+                    gameLog.classList.add('visible');
+                    logToggle.textContent = 'Hide game log';
+                }
+                addToHistory(match);
                 return;
             }
 
             if (match.status === 'timeout') {
                 resultStatus.textContent = 'Match timed out';
                 resultWinner.textContent = 'Timeout';
+                resultWinner.className = 'result-winner draw';
+            } else if (match.crashed != null) {
+                resultStatus.textContent = 'AI crashed during match';
+                var crashName = match.crashed === 0 ? match.ai1_name : match.ai2_name;
+                resultWinner.innerHTML = escapeHtml(crashName) + ' crashed';
                 resultWinner.className = 'result-winner draw';
             } else {
                 resultStatus.textContent = 'Match completed';
@@ -1041,10 +1055,12 @@ python3 tournament/match_server.py --port 8080</code></pre>
                 var m = matchHistory[i];
                 var resultCls = 'result-skip';
                 var resultText = 'Draw';
-                if (m.winner === 0) { resultCls = 'result-win'; resultText = 'P1 Win'; }
+                if (m.status === 'error') { resultCls = 'result-loss'; resultText = 'Error'; }
+                else if (m.crashed != null) { resultCls = 'result-loss'; resultText = 'Crash'; }
+                else if (m.winner === 0) { resultCls = 'result-win'; resultText = 'P1 Win'; }
                 else if (m.winner === 1) { resultCls = 'result-loss'; resultText = 'P2 Win'; }
                 else if (m.status === 'timeout') { resultText = 'Timeout'; }
-                var ticks = m.final_tick != null ? m.final_tick + ' ticks' : '';
+                var ticks = m.final_tick != null ? m.final_tick + ' ticks' : (m.status === 'error' ? 'error' : '--');
                 var ts = m._timestamp ? formatTime(m._timestamp) : '';
                 html += '<div class="history-entry" data-history-idx="' + i + '">' +
                     '<span class="history-result ' + resultCls + '">' + resultText + '</span>' +
