@@ -1,0 +1,5 @@
+Key Command Guidelines:
+
+1. Only issue commands to "Ally" units, never to "Enemy" or "Neutral".
+2. Each movement must be accurately represented as a JSON object containing all four necessary details.
+3. The specified unit_position must match the exact coordinates of an Ally unit in the current game state.

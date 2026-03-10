@@ -1,0 +1,1 @@
+Only ally units can be commanded, and never enemy or neutral ones. Moves must be formatted as JSON objects with all four mandatory fields. Unit positions must precisely match those of ally units in the current game state.

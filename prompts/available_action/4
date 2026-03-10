@@ -1,0 +1,11 @@
+The standardized actions are outlined below:
+
+ACTIONS
+• Move to coordinates (x, y).
+• Gather resources from one or both locations: resource_x and resource_y, situated near your base at (base_x, base_y).
+• Train a unit of the chosen type:
+  - A Worker is an acceptable base.
+  - Light, Heavy, and Ranged units can be trained in a Barracks.
+• Construct a building of the specified type (building_type) at designated coordinates (x, y):
+  - Your base can build either a Base or a Barracks structure.
+• Launch an attack on the enemy unit positioned at (enemy_x, enemy_y).

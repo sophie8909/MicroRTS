@@ -1,0 +1,12 @@
+The following actions are standardized and described in detail below:
+
+**ACTIONS**
+
+* Move to a specific location (x, y).
+* Collect resources from one or both of two specified locations (resource_x, resource_y) at your base location (base_x, base_y).
+* Train a unit of a chosen type (unit_type).
+  - A Worker can be trained as a base.
+  - Light, Heavy, and Ranged units can be trained in a Barracks.
+* Build a structure of a specified type (building_type) at a designated location (x, y).
+  - Your base can construct a Base or Barracks structure.
+* Launch an attack on an enemy unit located at position (enemy_x, enemy_y).

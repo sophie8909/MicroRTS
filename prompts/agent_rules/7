@@ -1,0 +1,1 @@
+Issued only to labeled "Ally" units, commands are restricted from targeting Enemy and Neutral entities. Each command must be a valid JSON object with four key fields: current coordinates, unit designation, target location, and action type (e.g., move or attack). Additionally, the actual in-game position of each unit must match its specified location precisely.

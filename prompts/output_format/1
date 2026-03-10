@@ -1,0 +1,12 @@
+REQUIRED JSON FORMAT:
+{
+  "thinking": "Brief strategy",
+  "moves": [
+    {
+      "raw_move": "(x, y): unit_type action((args))",
+      "unit_position": [x, y],
+      "unit_type": "worker",
+      "action_type": "harvest"
+    }
+  ]
+}

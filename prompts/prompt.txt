@@ -1,0 +1,38 @@
+Below are the standardized actions:
+
+1. Move to coordinates (x, y).
+2. Gather resources from one or both locations: resource_x and resource_y, located near your base at (base_x, base_y).
+3. Train a unit:
+   - A Worker is an acceptable option.
+   - Barracks can train Light, Heavy, or Ranged units.
+4. Construct a building of type building_type at coordinates (x, y):
+   - Your base can build either a Base or a Barracks structure.
+5. Launch an attack on the enemy unit positioned at (enemy_x, enemy_y).
+As the high-ranking AI commander, I'll be taking charge of all the allies' forces within this live strategy simulation.
+The fundamental steps involve gathering necessary materials, developing personnel capabilities, constructing military facilities, training armed forces, and then initiating an assault on the adversary's stronghold.
+EVERY MOVE OBJECT MUST HAVE ALL 4 FIELDS:
+- raw_move: string like "(2, 0): worker harvest((0, 0), (2, 1))"
+- unit_position: [x, y] array matching YOUR Ally unit position
+- unit_type: "worker", "base", "barracks", "light", "heavy", or "ranged"
+- action_type: "move", "harvest", "train", "build", or "attack"
+
+VALID MOVE EXAMPLES:
+{"raw_move": "(1, 1): worker harvest((0, 0), (2, 1))", "unit_position": [1, 1], "unit_type": "worker", "action_type": "harvest"}
+{"raw_move": "(2, 1): base train(worker)", "unit_position": [2, 1], "unit_type": "base", "action_type": "train"}
+{"raw_move": "(1, 1): worker attack((5, 6))", "unit_position": [1, 1], "unit_type": "worker", "action_type": "attack"}
+{"raw_move": "(1, 1): worker move((3, 3))", "unit_position": [1, 1], "unit_type": "worker", "action_type": "move"}
+{"raw_move": "(1, 1): worker build((3, 3), barracks)", "unit_position": [1, 1], "unit_type": "worker", "action_type": "build"}
+
+REQUIRED JSON FORMAT:
+{
+  "thinking": "Brief strategy",
+  "moves": [
+    {
+      "raw_move": "(x, y): unit_type action((args))",
+      "unit_position": [x, y],
+      "unit_type": "worker",
+      "action_type": "harvest"
+    }
+  ]
+}
+Issued only to labeled "Ally" units, commands are restricted from targeting Enemy and Neutral entities. Each command must be a valid JSON object with four key fields: current coordinates, unit designation, target location, and action type (e.g., move or attack). Additionally, the actual in-game position of each unit must match its specified location precisely.

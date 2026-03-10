@@ -1,0 +1,6 @@
+ACTIONS (use exact format):
+- move((x, y)) - Move to position
+- harvest((resource_x, resource_y), (base_x, base_y)) - Worker gathers resources
+- train(unit_type) - Base trains: worker | Barracks trains: light, heavy, ranged
+- build((x, y), building_type) - Worker builds: base, barracks
+- attack((enemy_x, enemy_y)) - Attack enemy at position
