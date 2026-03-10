@@ -32,7 +32,7 @@ import rts.Game;
  *
  * @author Mukesh
  */
-public class samla extends AbstractionLayerAI {
+public class EAGLE extends AbstractionLayerAI {
 
     /**
      * Static & non-static variables
@@ -192,7 +192,7 @@ public class samla extends AbstractionLayerAI {
     // 若都沒設，預設讀 prompts/prompt.txt
     static final String PROMPT_PATH =
             System.getProperty("microrts.prompt",
-                    System.getenv().getOrDefault("MICRORTS_PROMPT", "prompts/prompt.txt"));
+                    System.getenv().getOrDefault("MICRORTS_PROMPT", "prompt.txt"));
 
     // fallback：避免檔案不存在時直接炸掉
     static final String DEFAULT_PROMPT = """
@@ -366,7 +366,7 @@ public class samla extends AbstractionLayerAI {
      * @param a_utt
      *
      */
-    public samla(UnitTypeTable a_utt) {
+    public EAGLE(UnitTypeTable a_utt) {
         this(a_utt, new AStarPathFinding());
 
         //
@@ -399,7 +399,7 @@ public class samla extends AbstractionLayerAI {
          */
     }
 
-    public samla(UnitTypeTable a_utt,String aiName1, String aiName2){
+    public EAGLE(UnitTypeTable a_utt,String aiName1, String aiName2){
         this(a_utt, new AStarPathFinding());
         if((aiName1 != null && aiName2 != null) && (!(aiName1.isEmpty())  || !(aiName2.isEmpty())) && logsInitializedone != true) {
             this.aiName1 = aiName1;
@@ -415,7 +415,7 @@ public class samla extends AbstractionLayerAI {
      * @param a_utt = ?
      * @param a_pf = ?
      */
-    public samla(UnitTypeTable a_utt, PathFinding a_pf) {
+    public EAGLE(UnitTypeTable a_utt, PathFinding a_pf) {
         super(a_pf); //
         System.out.println(" in this 2 nd mg546924 180 "+ a_utt);
         reset(a_utt); // method call
@@ -545,7 +545,7 @@ public class samla extends AbstractionLayerAI {
 
     @Override
     public AI clone() {
-        return new samla(utt, pf);
+        return new EAGLE(utt, pf);
     }
 
 
@@ -565,7 +565,7 @@ public class samla extends AbstractionLayerAI {
 
         String finalPrompt;
 
-        System.out.println(" [samla.getAction] start ");
+        System.out.println(" [EAGLE.getAction] start ");
 
         // If we're NOT on an LLM turn, just keep executing the abstract actions already assigned
         if (gs.getTime() % LLM_INTERVAL != 0) {
