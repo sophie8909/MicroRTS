@@ -1,9 +1,0 @@
-Critical Command Guidelines:
-
-1. Issue commands only to units labeled "Ally", ignoring Enemy and Neutral units.
-2. Each move must be a valid JSON object with four required fields: 
-   - Current unit position
-   - Unit ID
-   - New target location
-   - Command action type (move, attack etc.)
-3. Verify the unit's current in-game location exactly matches the specified position.

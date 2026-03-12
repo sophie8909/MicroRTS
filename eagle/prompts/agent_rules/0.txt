@@ -1,4 +1,0 @@
-CRITICAL RULES:
-1. You can ONLY command units marked as "Ally" - NEVER command "Enemy" or "Neutral" units
-2. Each move MUST be a JSON object with ALL four required fields
-3. The unit_position MUST match an Ally unit's position exactly from the game state

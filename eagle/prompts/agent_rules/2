@@ -1,5 +1,0 @@
-Critical Command Protocols:
-
-1. Issue commands only to "Ally" units; do not interact with "Enemy" or "Neutral" entities.
-2. Each move must conform to a valid JSON structure, incorporating these key fields: unit_position, unit_id, new_unit_position, and command_type.
-3. Ensure the specified unit position in your command precisely matches its current location within the game state.
