@@ -19,7 +19,7 @@ class EAConfig:
     # General experiment setup
     # -------------------------
     seed: int = 42
-    algorithm: str = "nsga2"  # "nsga2" or "moead"
+    algorithm: str = "ga"  # "nsga2" or "moead"
     generations: int = 5
     population_size: int = 3
     verbose: bool = True

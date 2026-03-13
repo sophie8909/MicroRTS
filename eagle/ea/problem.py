@@ -67,16 +67,28 @@ class MicroRTSPromptProblem:
             n_states=self.cfg.surrogate_states,
         )
 
-        objectives: List[float] = []
-        for name in self.cfg.objective_names:
-            if name not in metrics:
-                raise KeyError(
-                    f"Objective '{name}' not found in surrogate metrics. "
-                    f"Available keys: {list(metrics.keys())}"
-                )
-            objectives.append(float(metrics[name]))
-
-        individual.objectives = objectives
+        # For single-objective algorithms, we can combine multiple metrics into one fitness score.
+        if self.cfg.algorithm == "ga":
+            # You can adjust the weights later.
+            fitness = (
+                0.20 * metrics["fluency"]
+                + 0.25 * metrics["format_score"]
+                + 0.20 * metrics["rule_score"]
+                + 0.15 * metrics["strategy_score"]
+                + 0.20 * metrics["turn_score"]
+            )
+            individual.fitness = float(fitness)
+        # For multi-objective algorithms, we need to construct the objective vector explicitly.
+        else: 
+            objectives: List[float] = []
+            for name in self.cfg.objective_names:
+                if name not in metrics:
+                    raise KeyError(
+                        f"Objective '{name}' not found in surrogate metrics. "
+                        f"Available keys: {list(metrics.keys())}"
+                    )
+                objectives.append(float(metrics[name]))
+            individual.objectives = objectives
         individual.evaluated = True
         individual.metadata.update(metrics)
         individual.metadata["prompt_text"] = prompt_text

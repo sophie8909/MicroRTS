@@ -9,8 +9,6 @@ from .component_pool import ComponentPool
 from .config import EAConfig
 from .evaluator import PromptEvaluator
 from .java_runner import JavaEvalConfig, JavaGameRunner
-from .moead import MOEAD
-from .nsga2 import NSGA2
 from .problem import MicroRTSPromptProblem
 from .surrogate import SurrogateEvaluator
 
@@ -302,12 +300,17 @@ def main() -> None:
     random.seed(cfg.seed)
 
     problem = build_problem(cfg)
-
-    if cfg.algorithm.lower() == "nsga2":
+    # Set up the EA algorithm based on the config.
+    if cfg.algorithm.lower() == "ga":
+        from .ga import GA
+        algo = GA(problem=problem, cfg=cfg)
+        final_solutions = algo.run()
+    elif cfg.algorithm.lower() == "nsga2":
+        from .nsga2 import NSGA2
         algo = NSGA2(problem=problem, cfg=cfg)
         final_solutions = algo.run()
-
     elif cfg.algorithm.lower() == "moead":
+        from .moead import MOEAD
         algo = MOEAD(problem=problem, cfg=cfg)
         final_solutions = algo.run()
 
