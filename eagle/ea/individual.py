@@ -15,11 +15,13 @@ class Individual:
                  strategy: list[int] = None, 
                  role: int = 0):
         # use indices to reference components in the component pool
-        self.role = role
+        # stable components (only one option, not evolved)
         self.critical_rules = critical_rules
         self.actions = actions
         self.json_schema = json_schema
         self.field_requirements = field_requirements
+        # evolving components
+        self.role = role
         self.examples = examples
         if strategy is None:
             strategy = [0] * 7  # Assuming 7 strategy components
@@ -38,10 +40,6 @@ class Individual:
             return default
 
         self.role = _safe_index('role')
-        self.critical_rules = _safe_index('critical_rules')
-        self.actions = _safe_index('actions')
-        self.json_schema = _safe_index('json_schema')
-        self.field_requirements = _safe_index('field_requirements')
         self.examples = _safe_index('examples')
         self.strategy = [
             component_pool.get_random_strategy_component_index(strategy_key)

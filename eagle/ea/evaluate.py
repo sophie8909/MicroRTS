@@ -54,16 +54,39 @@ class Evaluator:
     def parse_fitness(self, log_content: str) -> float:
         # Parse the log content from MicroRTS to extract the fitness score 
 
+        # win = 1, loss = 0, draw = 0.5
+        winning_score = 0.5  # Default to draw if no winner is found
         # find "WINNER: " in the log content
         for line in log_content.splitlines():
             if "WINNER: " in line:
                 winner = line.split("WINNER: ")[1].strip()
                 if winner == "0":  # Assuming Player1 is our agent
-                    return 1.0  # Win
+                    winning_score = 1.0  # Win
                 else:
-                    return 0.0  # Loss
-            
-        return 0.5  # Tie
+                    winning_score = 0.0  # Loss
+
+
+        number_of_turns = 0    
+        # find current time 2 p0 player 0(5) p1 player 1(5) in the log content to get the number of turns
+        for line in log_content.splitlines():
+            if "current time" in line:
+                parts = line.split()
+                # print(f"Debug: parts of current time line: {parts}")
+                try:
+                    number_of_turns = int(parts[2])  # Assuming the format is consistent
+                except ValueError:
+                    pass  # If parsing fails, keep number_of_turns as 0
+        print(f"Parsed fitness: winning_score={winning_score}, number_of_turns={number_of_turns}")
+        
+        # fitness
+        # v1: winning_score
+        # v2: winning_score + number_of_turns (the more turns, the better when tie)
+        fitness = winning_score
+        if winning_score == 0.5:  # Draw
+            # 10 when game time is 60 sec
+            fitness = winning_score + number_of_turns / 10  # Add a bonus for more turns in a draw
+
+        return fitness
 
 
     def simulate_games(self, prompt: str) -> float:
@@ -93,7 +116,8 @@ class Evaluator:
         log_files = glob.glob(str(self.repo_root / "logs" / "run_*.log"))
         if not log_files:
             return 0.0
-        latest_log_file = max(log_files, key=os.path.getctime)
+        latest_log_file = sorted(log_files)[-1]
+        print(f"Testing parse_fitness with log file: {latest_log_file}")
         with open(latest_log_file, "r", encoding="utf-8") as f:
             log_content = f.read()
         # parse the log content to get the fitness score

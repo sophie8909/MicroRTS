@@ -85,3 +85,9 @@ class ComponentPool:
         if not candidates:
             raise ValueError(f"No candidates found for component category: {category}")
         return random.randint(0, len(candidates) - 1)
+    
+    def add_component(self, category: str, component: List[str]) -> int:
+        if category not in self.components:
+            raise KeyError(f"Component category not found: {category}")
+        self.components[category].append(component)
+        return len(self.components[category]) - 1  # Return the index of the newly added component

@@ -72,7 +72,7 @@ class GA:
     def mutate(self, individual: Individual) -> Individual:
         # Apply mutation to a solution with the configured mutation rate (e.g., mutate_solution function)
         if self.config.mutation_rate > 0:
-            mutated_individual = Mutation.mutate_component(individual, self.component_pool, self.config.mutation_rate)
+            mutated_individual = Mutation.mutate_component_from_pool(individual, self.component_pool, self.config.mutation_rate)
             return mutated_individual
         return individual
 
@@ -86,6 +86,7 @@ class GA:
         )
     
     def run(self):
+        
         # log  logs/YYMMDD_HHMMSS/generation_X.txt
         import datetime
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -125,3 +126,10 @@ class GA:
                 f.write("\nPopulation:\n")
                 for ind in self.population:
                     f.write(f"{ind} - Fitness: {ind.fitness}\n")
+
+        # Store the components_pool in a file for later analysis
+        import json
+        components_file = f"{log_dir}/component_pool.json"
+        with open(components_file, "w") as f:
+            json.dump(self.component_pool.components, f, indent=4)
+            
