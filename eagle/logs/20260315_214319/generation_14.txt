@@ -1,3 +1,6 @@
+Generation 14
+Best Individual: Individual(role=6, critical_rules=0, actions=0, json_schema=0, field_requirements=0, examples=0, strategy=[2, 9, 8, 0, 2, 2, 6])
+Prompt:
 You are a turn-by-turn decision agent rather than a narrator.
 Your output should focus on actionable control decisions, not long explanations.
 CRITICAL RULES:
@@ -37,9 +40,8 @@ VALID MOVE EXAMPLES:
 Threat-first planning:
 Before expanding economy or attacking, check whether our workers, base, or barracks are under immediate danger.
 If so, redirect nearby units to stabilize the position first.
-Focus favorable trades:
-Engage when our local force can win or efficiently damage a valuable enemy target.
-Avoid taking fights that sacrifice units for little strategic gain.
+End local threats cleanly:
+If an enemy is already damaged or nearly eliminated, finishing it may be better than switching to a fresh target.
 Do not sacrifice all workers for offense:
 Even aggressive strategies need enough economy to keep producing units.
 Production policy:
@@ -47,12 +49,22 @@ Bases produce workers until the economy is stable for the map size.
 Construct a barracks when the base has sufficient resources and none exists nearby.
 Barracks should prioritize producing Heavy units as the primary frontline.
 Produce Ranged units when pathing is narrow, terrain is constrained, or Heavy units are unaffordable.
-Do not over-expose lone workers:
-Workers moving far from base for building or pressure should not be sent into obviously losing positions.
-Target selection:
-Prefer attacking closer enemies when multiple targets are available.
-Prioritize dangerous combat units over workers when possible.
-If the opportunity arises, attack enemy production structures such as barracks.
-Destroying the enemy base or barracks greatly weakens enemy production.
+Do not leave workers idle without reason:
+Idle workers should usually harvest, build, or assist in urgent local defense.
+Prioritize active threats:
+An enemy already threatening our workers or structures is often a better target than a distant harmless unit.
 Do not block your own economy unnecessarily:
 Avoid parking combat units in ways that interfere with harvesting or building paths.
+Fitness: 3.6
+
+Population:
+Individual(role=6, critical_rules=0, actions=0, json_schema=0, field_requirements=0, examples=0, strategy=[2, 9, 8, 0, 2, 2, 6]) - Fitness: 3.6
+Individual(role=6, critical_rules=0, actions=0, json_schema=0, field_requirements=0, examples=0, strategy=[2, 9, 9, 0, 6, 2, 6]) - Fitness: 3.6
+Individual(role=6, critical_rules=0, actions=0, json_schema=0, field_requirements=0, examples=0, strategy=[2, 9, 8, 2, 6, 5, 7]) - Fitness: 3.4
+Individual(role=6, critical_rules=0, actions=0, json_schema=0, field_requirements=0, examples=0, strategy=[2, 2, 9, 2, 0, 7, 6]) - Fitness: 3.4
+Individual(role=6, critical_rules=0, actions=0, json_schema=0, field_requirements=0, examples=0, strategy=[2, 9, 9, 2, 0, 2, 6]) - Fitness: 3.4
+Individual(role=6, critical_rules=0, actions=0, json_schema=0, field_requirements=0, examples=0, strategy=[2, 9, 9, 0, 6, 5, 6]) - Fitness: 3.4
+Individual(role=6, critical_rules=0, actions=0, json_schema=0, field_requirements=0, examples=0, strategy=[2, 2, 9, 2, 0, 2, 6]) - Fitness: 3.4
+Individual(role=6, critical_rules=0, actions=0, json_schema=0, field_requirements=0, examples=0, strategy=[2, 2, 9, 2, 0, 2, 6]) - Fitness: 3.3
+Individual(role=6, critical_rules=0, actions=0, json_schema=0, field_requirements=0, examples=0, strategy=[2, 4, 9, 0, 2, 2, 6]) - Fitness: 3.3
+Individual(role=6, critical_rules=0, actions=0, json_schema=0, field_requirements=0, examples=0, strategy=[2, 9, 8, 0, 2, 2, 6]) - Fitness: 3.3

@@ -1,3 +1,6 @@
+Generation 45
+Best Individual: Individual(role=6, critical_rules=0, actions=0, json_schema=0, field_requirements=0, examples=0, strategy=[2, 2, 8, 0, 9, 2, 6])
+Prompt:
 You are a turn-by-turn decision agent rather than a narrator.
 Your output should focus on actionable control decisions, not long explanations.
 CRITICAL RULES:
@@ -49,10 +52,20 @@ Barracks should prioritize producing Heavy units as the primary frontline.
 Produce Ranged units when pathing is narrow, terrain is constrained, or Heavy units are unaffordable.
 Do not over-expose lone workers:
 Workers moving far from base for building or pressure should not be sent into obviously losing positions.
-Target selection:
-Prefer attacking closer enemies when multiple targets are available.
-Prioritize dangerous combat units over workers when possible.
-If the opportunity arises, attack enemy production structures such as barracks.
-Destroying the enemy base or barracks greatly weakens enemy production.
+Prioritize active threats:
+An enemy already threatening our workers or structures is often a better target than a distant harmless unit.
 Do not block your own economy unnecessarily:
 Avoid parking combat units in ways that interfere with harvesting or building paths.
+Fitness: 3.7
+
+Population:
+Individual(role=6, critical_rules=0, actions=0, json_schema=0, field_requirements=0, examples=0, strategy=[2, 2, 8, 0, 9, 2, 6]) - Fitness: 3.7
+Individual(role=6, critical_rules=0, actions=0, json_schema=0, field_requirements=0, examples=0, strategy=[2, 2, 8, 0, 9, 2, 6]) - Fitness: 3.7
+Individual(role=6, critical_rules=0, actions=0, json_schema=0, field_requirements=0, examples=0, strategy=[2, 2, 9, 0, 2, 2, 6]) - Fitness: 3.7
+Individual(role=6, critical_rules=0, actions=0, json_schema=0, field_requirements=0, examples=0, strategy=[2, 2, 8, 0, 6, 2, 6]) - Fitness: 3.7
+Individual(role=6, critical_rules=0, actions=0, json_schema=0, field_requirements=0, examples=0, strategy=[2, 2, 8, 0, 9, 2, 6]) - Fitness: 3.7
+Individual(role=6, critical_rules=0, actions=0, json_schema=0, field_requirements=0, examples=0, strategy=[2, 2, 8, 0, 6, 2, 6]) - Fitness: 3.7
+Individual(role=6, critical_rules=0, actions=0, json_schema=0, field_requirements=0, examples=0, strategy=[2, 2, 8, 0, 9, 2, 6]) - Fitness: 3.7
+Individual(role=6, critical_rules=0, actions=0, json_schema=0, field_requirements=0, examples=0, strategy=[2, 9, 8, 0, 2, 2, 6]) - Fitness: 3.6
+Individual(role=6, critical_rules=0, actions=0, json_schema=0, field_requirements=0, examples=0, strategy=[2, 9, 9, 0, 6, 2, 6]) - Fitness: 3.6
+Individual(role=6, critical_rules=0, actions=0, json_schema=0, field_requirements=0, examples=0, strategy=[2, 2, 9, 0, 6, 5, 5]) - Fitness: 3.6
