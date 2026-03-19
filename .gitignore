@@ -16,6 +16,7 @@ sources.list
 /logs/
 /traces/
 !/examples/traces/
+/eagle/logs/
 
 # Python
 __pycache__/
