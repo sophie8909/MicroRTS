@@ -91,3 +91,19 @@ class ComponentPool:
             raise KeyError(f"Component category not found: {category}")
         self.components[category].append(component)
         return len(self.components[category]) - 1  # Return the index of the newly added component
+
+    def add_strategy_component(self, strategy: str, component: List[str]) -> int:
+        if strategy not in self.components["strategy"]:
+            raise KeyError(f"Strategy category not found: {strategy}")
+        self.components["strategy"][strategy].append(component)
+        return len(self.components["strategy"][strategy]) - 1  # Return the index of the newly added component     
+    def get_component_str(self, category: str, index: int) -> str:
+        if category == "strategy":
+            raise ValueError(
+                "Use get_strategy_component(strategy_key, index) for strategy components."
+            )
+        component_lines = self.get_component(category, index)
+        return "\n".join(component_lines)
+    
+    def parse_component_str(self, component_str: str) -> List[str]:
+        return component_str.splitlines()

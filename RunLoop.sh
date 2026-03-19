@@ -2,7 +2,7 @@
 set -euo pipefail
 
 TOTAL_RUNS=1                       # << set to 1000 for one thousand runs
-RUN_TIME_PER_GAME_SEC="${RUN_TIME_PER_GAME_SEC:-60}"  # << set default seconds per run it needs to be 500
+RUN_TIME_PER_GAME_SEC="${RUN_TIME_PER_GAME_SEC:-5000}"  # << set default seconds per run it needs to be 500
 
 mkdir -p logs bin
 

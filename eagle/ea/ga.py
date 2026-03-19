@@ -5,6 +5,7 @@ This module defines the GA class, which implements a genetic algorithm to optimi
 
 from __future__ import annotations
 
+import random
 from typing import List
 
 from .evaluate import Evaluator
@@ -72,7 +73,10 @@ class GA:
     def mutate(self, individual: Individual) -> Individual:
         # Apply mutation to a solution with the configured mutation rate (e.g., mutate_solution function)
         if self.config.mutation_rate > 0:
-            mutated_individual = Mutation.mutate_component_from_pool(individual, self.component_pool, self.config.mutation_rate)
+            if random.random() < 0.5:
+                mutated_individual = Mutation.mutate_component_from_pool(individual, self.component_pool, self.config.mutation_rate)
+            else:
+                mutated_individual = Mutation.mutate_component_LLM(individual, self.component_pool, self.config.mutation_rate)
             return mutated_individual
         return individual
 
@@ -132,4 +136,3 @@ class GA:
         components_file = f"{log_dir}/component_pool.json"
         with open(components_file, "w") as f:
             json.dump(self.component_pool.components, f, indent=4)
-            

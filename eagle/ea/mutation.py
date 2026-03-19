@@ -21,12 +21,12 @@ class Mutation:
             strategy=individual.strategy.copy()
         )
         
+        # mutate evolving components
         if random.random() < mutation_rate:
             mutated_individual.role = component_pool.get_random_component_index('role')
-        
         if random.random() < mutation_rate:
-            mutated_individual.examples = component_pool.get_random_component_index('examples')
-        
+            mutated_individual.critical_rules = component_pool.get_random_component_index('critical_rules')
+
         for i in range(len(mutated_individual.strategy)):
             if random.random() < mutation_rate:
                 strategy_key = component_pool.strategy_keys[i]
@@ -34,6 +34,7 @@ class Mutation:
         
         return mutated_individual
     
+    @staticmethod
     def rewrite_component_with_LLM(component: str, rewrite_instruction: str) -> str:
         
         rewritten_role_component = LLM.ollama_rewrite_component(
@@ -41,8 +42,8 @@ class Mutation:
             instruction=rewrite_instruction,
             model="llama3.1:8b",
         )
-        return component  # Return the original component for now
-        
+        return rewritten_role_component 
+
 
 
     @staticmethod
@@ -67,24 +68,26 @@ class Mutation:
                 "Make this role description clearer and slightly more directive "
                 "for a MicroRTS agent, while preserving its original function."
             )
-            original_role_component = component_pool.get_component('role', individual.role)
-            rewritten_role_component = Mutation.rewrite_component_with_LLM(original_role_component, rewrite_instruction)
+            original_role_component_str = component_pool.get_component_str('role', individual.role)
+            rewritten_role_component_str = Mutation.rewrite_component_with_LLM(original_role_component_str, rewrite_instruction)
+            rewritten_role_component = component_pool.parse_component_str(rewritten_role_component_str)
 
             new_role_index = component_pool.add_component('role', rewritten_role_component)
             mutated_individual.role = new_role_index
 
-        # LLM rewrite for examples
+        # LLM rewrite for critical_rules
         if random.random() < mutation_rate:
-            # LLM rewrite for examples
+            # LLM rewrite for critical_rules
             rewrite_instruction = (
-                "Provide a more detailed and specific example for a MicroRTS agent's behavior, "
-                "ensuring it aligns with the game's mechanics and objectives."
+                "Enhance this critical rule for a MicroRTS agent, making it more robust and effective "
+                "in handling complex game scenarios while maintaining its core functionality."
             )
-            original_examples_component = component_pool.get_component('examples', individual.examples)
-            rewritten_examples_component = Mutation.rewrite_component_with_LLM(original_examples_component, rewrite_instruction)
+            original_critical_rules_component_str = component_pool.get_component_str('critical_rules', individual.critical_rules)
+            rewritten_critical_rules_component_str = Mutation.rewrite_component_with_LLM(original_critical_rules_component_str, rewrite_instruction)
+            rewritten_critical_rules_component = component_pool.parse_component_str(rewritten_critical_rules_component_str)
 
-            new_examples_index = component_pool.add_component('examples', rewritten_examples_component)
-            mutated_individual.examples = new_examples_index
+            new_critical_rules_index = component_pool.add_component('critical_rules', rewritten_critical_rules_component)
+            mutated_individual.critical_rules = new_critical_rules_index
 
 
         # Strategy components mutation with LLM rewrite
@@ -95,8 +98,11 @@ class Mutation:
         for i in range(len(mutated_individual.strategy)):
             if random.random() < mutation_rate:
                 strategy_key = component_pool.strategy_keys[i]
-                original_strategy_component = component_pool.get_strategy_component(strategy_key, individual.strategy[i])
-                rewritten_strategy_component = Mutation.rewrite_component_with_LLM(original_strategy_component, rewrite_instruction)
+                original_strategy_component_str = "\n".join(
+                    component_pool.get_strategy_component(strategy_key, individual.strategy[i])
+                )
+                rewritten_strategy_component_str = Mutation.rewrite_component_with_LLM(original_strategy_component_str, rewrite_instruction)
+                rewritten_strategy_component = component_pool.parse_component_str(rewritten_strategy_component_str)
                 new_strategy_index = component_pool.add_strategy_component(strategy_key, rewritten_strategy_component)
                 mutated_individual.strategy[i] = new_strategy_index
 

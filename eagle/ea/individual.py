@@ -16,13 +16,15 @@ class Individual:
                  role: int = 0):
         # use indices to reference components in the component pool
         # stable components (only one option, not evolved)
-        self.critical_rules = critical_rules
+        self.stable_components = [actions, json_schema, field_requirements, examples]
         self.actions = actions
         self.json_schema = json_schema
         self.field_requirements = field_requirements
-        # evolving components
-        self.role = role
         self.examples = examples
+        # evolving components
+        self.evolving_components = [critical_rules, role]
+        self.critical_rules = critical_rules
+        self.role = role
         if strategy is None:
             strategy = [0] * 7  # Assuming 7 strategy components
         self.strategy = strategy
