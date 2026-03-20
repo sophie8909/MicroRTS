@@ -24,3 +24,4 @@ __pycache__/
 tournament/traces/*.xml
 tournament/traces/*.json
 tournament/traces/*.xml
+prompt.txt

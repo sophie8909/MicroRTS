@@ -41,7 +41,8 @@ class LLM:
         return data["response"].strip()
     
 
-    def ollama_evaluate_fitness(self, prompt: str, model: str = "llama3.1:8b", temperature: float = 0.7) -> float:
+    @staticmethod
+    def ollama_evaluate_fitness(prompt: str, model: str = "llama3.1:8b", temperature: float = 0.7) -> float:
         evaluation_prompt = f"""
         You are evaluating the fitness of a prompt for an RTS game-playing agent based on its expected performance in a MicroRTS game.
 

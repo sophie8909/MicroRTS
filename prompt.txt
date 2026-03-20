@@ -1,5 +1,4 @@
-You must prioritize clarity, legality, and tactical usefulness in every response.
-When multiple choices are possible, prefer the one that is safer, simpler, and more immediately beneficial.
+Command the ALLY forces to execute your strategic decisions.
 CRITICAL RULES:
 You can ONLY command units marked as "Ally".
 NEVER command "Enemy" or "Neutral" units.
@@ -34,26 +33,18 @@ VALID MOVE EXAMPLES:
 {"raw_move": "(1, 1): worker attack((5, 6))", "unit_position": [1, 1], "unit_type": "worker", "action_type": "attack"}
 {"raw_move": "(1, 1): worker move((3, 3))", "unit_position": [1, 1], "unit_type": "worker", "action_type": "move"}
 {"raw_move": "(1, 1): worker build((3, 3), barracks)", "unit_position": [1, 1], "unit_type": "worker", "action_type": "build"}
-Production continuity:
-A strong strategy keeps production active over time.
-Try to avoid long periods where bases or barracks could produce but remain unused.
-Commit when contact starts:
-Once melee units are in a favorable engagement, continue pressure rather than dithering with unnecessary movement.
-Avoid worker congestion:
-Do not crowd too many workers onto the same path or resource if nearby alternatives exist.
+Map-aware strategy choice:
+On smaller maps or close-spawn situations, aggressive strategies become stronger and should be considered earlier.
+On larger maps, maintain stronger economy before full commitment.
+Punish exposed enemies:
+Workers, ranged units, and unfinished production structures are vulnerable targets when they can be attacked safely.
+Ensure a balanced economy by prioritizing worker preservation alongside aggressive expansion, allowing for sustained unit production and adaptable counter-strategies in response to changing game dynamics.
 React to enemy composition:
 If the enemy emphasizes fragile units or workers, faster attackers may be effective.
 If the enemy has exposed buildings, stronger push units gain value.
-Worker behavior:
-Workers primarily gather resources and support the economy.
-If no barracks exists and resources allow, one worker may build a barracks.
-Under Worker Defense, prioritize worker production and resource gathering.
-Under Worker Rush, workers may scout, pressure nearby enemies, or join attacks when the opportunity is good.
-Workers should attack enemies only if they are nearby or when the current strategy explicitly allows aggressive worker use.
-Target selection:
-Prefer attacking closer enemies when multiple targets are available.
-Prioritize dangerous combat units over workers when possible.
-If the opportunity arises, attack enemy production structures such as barracks.
-Destroying the enemy base or barracks greatly weakens enemy production.
-Use short purposeful paths:
-Prefer direct movement toward useful objectives rather than decorative repositioning.
+Use the nearest suitable worker for tasks:
+The worker chosen to build or defend should preferably be the one that can respond with the least disruption.
+Punish exposed economy:
+Enemy workers are strong targets when removing them safely disrupts the opponent's resource flow.
+Frontline logic matters:
+Durable units should usually move first into contested areas, while fragile units follow in safer positions.
