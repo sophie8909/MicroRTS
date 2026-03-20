@@ -4,8 +4,11 @@ This module defines the evaluation framework for the evolutionary algorithm. It 
 
 from __future__ import annotations
 from pathlib import Path
+
+from .llm import LLM
 from .component_pool import ComponentPool
 from .individual import Individual
+from .log_parse import parse_log
 
 
 class Evaluator:
@@ -13,7 +16,7 @@ class Evaluator:
         self.component_pool = component_pool
         self.repo_root = Path(__file__).resolve().parents[2]
     
-    def evaluate(self, individual: Individual) -> float:
+    def evaluate(self, individual: Individual, real_eva: bool) -> float:
         # Construct the prompt based on the individual's components
         prompt = self.construct_prompt(individual)
 
@@ -22,7 +25,10 @@ class Evaluator:
         with open(prompt_path, "w", encoding="utf-8") as f:
             f.write(prompt)
         # Simulate games in MicroRTS using the constructed prompt and measure performance
-        fitness = self.simulate_games(prompt)
+        if real_eva:
+            fitness = self.simulate_games(prompt)
+        else:
+            fitness = self.surrogate_evaluation(prompt)
         return fitness
     
     def construct_prompt(self, individual: Individual) -> str:
@@ -51,9 +57,28 @@ class Evaluator:
         prompt = "\n".join(prompt_lines + strategy_components)
         return prompt
     
-    def parse_fitness(self, log_content: str) -> float:
-        # Parse the log content from MicroRTS to extract the fitness score 
+    def game_round_available_evaluation(self, log_content: str) -> float:
+        # An alternative evaluation method that analyzes the log content from a MicroRTS game to compute a fitness score based on the game rounds and available actions. This can provide a more granular assessment of the agent's performance throughout the game, rather than just the final outcome.
+        
+        # Parse the log content to extract move results and compute fitness based on the number of successful moves, available actions, and game rounds.
+        parsed_log = parse_log(log_content)
+        # print(f"Parsed log: {parsed_log}")
+        summary = parsed_log["summary"]
+        # print(f"Parsed log summary: {summary}")
+        llm_moves = summary["llm_move_count"]
+        direct_failure_count = summary["direct_failure_count"]
+        applied_failure_count = summary["applied_failure_count"]
+        applied_success_count = summary["applied_success_count"]
 
+        # fitness for game_round_available_evaluation
+        # fitness: [0, 1]
+        if llm_moves == 0:
+            return 0.0
+        fitness = (applied_success_count + 0.5 * applied_failure_count) / llm_moves
+
+        return fitness
+
+    def win_loss_evaluation(self, log_content: str) -> float:
         # win = 1, loss = 0, draw = 0.5
         winning_score = 0.5  # Default to draw if no winner is found
         # find "WINNER: " in the log content
@@ -64,27 +89,33 @@ class Evaluator:
                     winning_score = 1.0  # Win
                 else:
                     winning_score = 0.0  # Loss
-
-
+        return winning_score
+    
+    def number_of_turns_evaluation(self, log_content: str) -> int:
+        # parse the log content to get the number of turns in the game
         number_of_turns = 0    
-        # find current time 2 p0 player 0(5) p1 player 1(5) in the log content to get the number of turns
         for line in log_content.splitlines():
             if "current time" in line:
                 parts = line.split()
-                # print(f"Debug: parts of current time line: {parts}")
                 try:
                     number_of_turns = int(parts[2])  # Assuming the format is consistent
                 except ValueError:
                     pass  # If parsing fails, keep number_of_turns as 0
-        print(f"Parsed fitness: winning_score={winning_score}, number_of_turns={number_of_turns}")
+        return number_of_turns
+
+    def calculate_fitness_score(self, log_content: str) -> float:
         
+        winning_score = self.win_loss_evaluation(log_content)
+        number_of_turns_score = self.number_of_turns_evaluation(log_content) / 100
+        game_round_score = self.game_round_available_evaluation(log_content)  # This can be used as an additional metric if desired
+
+        print(f"Parsed fitness: winning_score={winning_score}, number_of_turns={number_of_turns_score}, game_round_fitness={game_round_score}")
+
         # fitness
         # v1: winning_score
         # v2: winning_score + number_of_turns (the more turns, the better when tie)
-        fitness = winning_score
-        if winning_score == 0.5:  # Draw
-            # 10 when game time is 60 sec
-            fitness = winning_score + number_of_turns / 10  # Add a bonus for more turns in a draw
+        # v3: winning_score + number_of_turns + game_round_fitness (consider both final outcome and in-game performance)
+        fitness = winning_score * 0.4 + number_of_turns_score * 0.3 + game_round_score * 0.3
 
         return fitness
 
@@ -121,5 +152,8 @@ class Evaluator:
         with open(latest_log_file, "r", encoding="utf-8") as f:
             log_content = f.read()
         # parse the log content to get the fitness score
-        fitness = self.parse_fitness(log_content)
+        fitness = self.calculate_fitness_score(log_content)
         return fitness
+    
+    def surrogate_evaluation(self, prompt: str) -> float:
+        return LLM.ollama_evaluate_fitness(prompt)

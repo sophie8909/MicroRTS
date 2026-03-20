@@ -13,7 +13,7 @@ def test_parse_fitness():
     with open(latest_log_file, "r", encoding="utf-8") as f:
         log_content = f.read()
     # parse the log content to get the fitness score
-    fitness = evaluator.parse_fitness(log_content)
+    fitness = evaluator.calculate_fitness_score(log_content)
     print(f"Parsed fitness: {fitness}")
 
 if __name__ == "__main__":

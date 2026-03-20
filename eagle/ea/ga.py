@@ -32,10 +32,16 @@ class GA:
             individuals.append(individual)
         return individuals
 
-    def evaluate_fitness(self, individual: Individual) -> float:
+    def real_evaluation(self, individual: Individual) -> float:
         # Evaluate the fitness of a solution by running it in MicroRTS and measuring performance
         evaluator = Evaluator(self.component_pool)
-        fitness = evaluator.evaluate(individual)
+        fitness = evaluator.evaluate(individual, real_eva=True)
+        individual.fitness = fitness  # Store the fitness in the individual for later use
+        return fitness
+    
+    def surrogate_evaluation(self, individual: Individual) -> float:
+        evaluator = Evaluator(self.component_pool)
+        fitness = evaluator.evaluate(individual, real_eva=False)
         individual.fitness = fitness  # Store the fitness in the individual for later use
         return fitness
     
@@ -98,7 +104,7 @@ class GA:
         import os
         os.makedirs(log_dir, exist_ok=True)
         for individual in self.population:
-            self.evaluate_fitness(individual)
+            self.real_evaluation(individual)
 
         # # Test the evaluation of a random individual
         # test_individual = Individual()
@@ -113,7 +119,13 @@ class GA:
                 parent1, parent2 = self.select_parents()
                 offspring = self.crossover(parent1, parent2)
                 mutated_offspring = self.mutate(offspring)
-                self.evaluate_fitness(mutated_offspring)
+                
+                # every 5 generations, do real evaluation, otherwise do surrogate evaluation
+                if generation % 5 == 0:
+                    self.real_evaluation(mutated_offspring)
+                else:
+                    self.surrogate_evaluation(mutated_offspring)
+
                 new_population.append(mutated_offspring)
             self.population = self.environment_selection(self.population, new_population)
 
