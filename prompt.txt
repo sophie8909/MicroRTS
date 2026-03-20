@@ -1,9 +1,6 @@
-Command the ALLY forces to execute your strategic decisions.
-CRITICAL RULES:
-You can ONLY command units marked as "Ally".
-NEVER command "Enemy" or "Neutral" units.
-Each move MUST be a JSON object with all required fields.
-The unit_position must exactly match an Ally unit position from the game state.
+Focus solely on the Ally team's situation, regarding Enemy and Neutral units as observable threats rather than manageable resources.
+Do not output commentary outside the JSON object.
+Do not add markdown fences, explanations, or extra text before or after the JSON.
 ACTIONS (use exact format):
 - move((x, y)) - Move to position
 - harvest((resource_x, resource_y), (base_x, base_y)) - Worker gathers resources
@@ -33,18 +30,26 @@ VALID MOVE EXAMPLES:
 {"raw_move": "(1, 1): worker attack((5, 6))", "unit_position": [1, 1], "unit_type": "worker", "action_type": "attack"}
 {"raw_move": "(1, 1): worker move((3, 3))", "unit_position": [1, 1], "unit_type": "worker", "action_type": "move"}
 {"raw_move": "(1, 1): worker build((3, 3), barracks)", "unit_position": [1, 1], "unit_type": "worker", "action_type": "build"}
-Map-aware strategy choice:
-On smaller maps or close-spawn situations, aggressive strategies become stronger and should be considered earlier.
-On larger maps, maintain stronger economy before full commitment.
-Punish exposed enemies:
-Workers, ranged units, and unfinished production structures are vulnerable targets when they can be attacked safely.
-Ensure a balanced economy by prioritizing worker preservation alongside aggressive expansion, allowing for sustained unit production and adaptable counter-strategies in response to changing game dynamics.
-React to enemy composition:
-If the enemy emphasizes fragile units or workers, faster attackers may be effective.
-If the enemy has exposed buildings, stronger push units gain value.
-Use the nearest suitable worker for tasks:
-The worker chosen to build or defend should preferably be the one that can respond with the least disruption.
-Punish exposed economy:
-Enemy workers are strong targets when removing them safely disrupts the opponent's resource flow.
-Frontline logic matters:
-Durable units should usually move first into contested areas, while fragile units follow in safer positions.
+Structure preservation:
+Bases and barracks are high-value assets.
+Protect production buildings when threatened unless a decisive attack opportunity clearly outweighs the loss.
+Combat policy:
+Prioritize base defense if enemy units are near our base, focusing on protecting nearby friendly structures and workers.
+In Worker Defense mode, military units will linger near the base to intercept threats.
+During Military Defense, units defend the base and surrounding resources while countering enemy unit types when feasible.
+When executing a Worker Rush, nearby enemies may be aggressively targeted by workers and fast units.
+Under Military Rush, advance combat units towards the enemy base, maintaining relentless pressure on the opponent.
+Attack immediately if an enemy is within attack range instead of retreating.
+Replace lost workers when needed:
+If worker count drops below a stable operating level, rebuild the economy unless survival requires pure defense.
+Military production should match intent:
+Defensive plans need enough defenders quickly, while offensive plans need sustained combat output.
+Worker Rush requires commitment:
+If the chosen strategy is worker-based aggression, workers must pressure decisively rather than drifting halfway between economy and combat.
+Target selection:
+Prefer attacking closer enemies when multiple targets are available.
+Prioritize dangerous combat units over workers when possible.
+If the opportunity arises, attack enemy production structures such as barracks.
+Destroying the enemy base or barracks greatly weakens enemy production.
+Chasing should be selective:
+Do not chase a distant enemy unit so far that you abandon core defense or lose strategic shape.
