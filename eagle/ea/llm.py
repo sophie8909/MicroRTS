@@ -1,4 +1,5 @@
 import requests
+import re
 
 class LLM:
 
@@ -55,23 +56,53 @@ class LLM:
         {prompt}
         """.strip()
 
-        response = requests.post(
-            "http://localhost:11434/api/generate",
-            json={
-                "model": model,
-                "prompt": evaluation_prompt,
-                "stream": False,
-                "options": {
-                    "temperature": temperature,
-                },
-            },
-            timeout=120,
-        )
-        response.raise_for_status()
-        data = response.json()
-        fitness_score_str = data["response"].strip()
         try:
-            fitness_score = float(fitness_score_str)
-            return max(0.0, min(1.0, fitness_score))  # Ensure the score is between 0 and 1
-        except ValueError:
-            raise ValueError(f"Invalid fitness score returned by LLM: '{fitness_score_str}'")
+            response = requests.post(
+                "http://localhost:11434/api/generate",
+                json={
+                    "model": model,
+                    "prompt": evaluation_prompt,
+                    "stream": False,
+                    "options": {
+                        "temperature": temperature,
+                    },
+                },
+                timeout=120,
+            )
+
+            response.raise_for_status()
+            data = response.json()
+            raw_output = data.get("response", "").strip()
+            fallback_score = 0.0  # Default fallback score if parsing fails
+            # -------------------------
+            # Step 1: direct float parse
+            # -------------------------
+            try:
+                score = float(raw_output)
+                return max(0.0, min(1.0, score))
+            except ValueError:
+                pass
+
+            # -------------------------
+            # Step 2: regex fallback (extract first float)
+            # -------------------------
+            match = re.search(r"\d*\.\d+|\d+", raw_output)
+            if match:
+                try:
+                    score = float(match.group())
+                    return max(0.0, min(1.0, score))
+                except ValueError:
+                    pass
+
+            # -------------------------
+            # Step 3: final fallback
+            # -------------------------
+            return fallback_score
+
+        except requests.exceptions.RequestException:
+            # network / timeout / connection error
+            return fallback_score
+
+        except Exception:
+            # anything unexpected
+            return fallback_score

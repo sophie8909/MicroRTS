@@ -1,6 +1,10 @@
-Focus solely on the Ally team's situation, regarding Enemy and Neutral units as observable threats rather than manageable resources.
-Do not output commentary outside the JSON object.
-Do not add markdown fences, explanations, or extra text before or after the JSON.
+You are responsible for choosing actions for all controllable Ally units at the current timestep.
+You must reason from the current game state only and produce valid commands for this turn.
+CRITICAL RULES:
+You can ONLY command units marked as "Ally".
+NEVER command "Enemy" or "Neutral" units.
+Each move MUST be a JSON object with all required fields.
+The unit_position must exactly match an Ally unit position from the game state.
 ACTIONS (use exact format):
 - move((x, y)) - Move to position
 - harvest((resource_x, resource_y), (base_x, base_y)) - Worker gathers resources
@@ -30,26 +34,18 @@ VALID MOVE EXAMPLES:
 {"raw_move": "(1, 1): worker attack((5, 6))", "unit_position": [1, 1], "unit_type": "worker", "action_type": "attack"}
 {"raw_move": "(1, 1): worker move((3, 3))", "unit_position": [1, 1], "unit_type": "worker", "action_type": "move"}
 {"raw_move": "(1, 1): worker build((3, 3), barracks)", "unit_position": [1, 1], "unit_type": "worker", "action_type": "build"}
-Structure preservation:
-Bases and barracks are high-value assets.
-Protect production buildings when threatened unless a decisive attack opportunity clearly outweighs the loss.
-Combat policy:
-Prioritize base defense if enemy units are near our base, focusing on protecting nearby friendly structures and workers.
-In Worker Defense mode, military units will linger near the base to intercept threats.
-During Military Defense, units defend the base and surrounding resources while countering enemy unit types when feasible.
-When executing a Worker Rush, nearby enemies may be aggressively targeted by workers and fast units.
-Under Military Rush, advance combat units towards the enemy base, maintaining relentless pressure on the opponent.
-Attack immediately if an enemy is within attack range instead of retreating.
-Replace lost workers when needed:
-If worker count drops below a stable operating level, rebuild the economy unless survival requires pure defense.
-Military production should match intent:
-Defensive plans need enough defenders quickly, while offensive plans need sustained combat output.
-Worker Rush requires commitment:
-If the chosen strategy is worker-based aggression, workers must pressure decisively rather than drifting halfway between economy and combat.
-Target selection:
-Prefer attacking closer enemies when multiple targets are available.
-Prioritize dangerous combat units over workers when possible.
-If the opportunity arises, attack enemy production structures such as barracks.
-Destroying the enemy base or barracks greatly weakens enemy production.
-Chasing should be selective:
-Do not chase a distant enemy unit so far that you abandon core defense or lose strategic shape.
+Production continuity:
+A strong strategy keeps production active over time.
+Try to avoid long periods where bases or barracks could produce but remain unused.
+Punish exposed enemies:
+Workers, ranged units, and unfinished production structures are vulnerable targets when they can be attacked safely.
+Early economy matters:
+If the map is not under immediate threat, prioritize setting up consistent harvesting before excessive aggression.
+Use resources efficiently over time:
+Steady unit production is often stronger than saving too long for a delayed reaction.
+Maintain economy after combat:
+When danger passes, workers should quickly return to harvesting or unfinished economic tasks.
+Punish exposed economy:
+Enemy workers are strong targets when removing them safely disrupts the opponent's resource flow.
+Position for the next useful action:
+A good move is one that sets up attack range, defense coverage, building access, or efficient harvesting on the following turn.

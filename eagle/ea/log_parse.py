@@ -47,6 +47,11 @@ FALLBACK_NO_MOVES_RE = re.compile(
     re.MULTILINE,
 )
 
+SKIP_RE = re.compile(
+    r"^\s*(?:⚠️\s*)?Skipping\s+.+$",
+    re.IGNORECASE,
+)
+
 
 # =========================================================
 # Data classes
@@ -295,6 +300,14 @@ def build_move_results(
                 line_idx += 1
                 break
 
+            if SKIP_RE.search(line):
+                status = "duplicate_skipped"
+                failure_reason = extract_failure_reason(line)
+                result_log = line
+                matched = True
+                line_idx += 1
+                break
+
             apply_match = APPLY_MOVE_RE.match(line)
             if apply_match:
                 status = "applied_success"
@@ -371,6 +384,7 @@ def parse_segment(segment: str, segment_index: int) -> dict[str, Any]:
 
     llm_move_count = len(normalize_llm_moves(raw_llm_json))
     direct_failure_count = sum(1 for m in move_results if m.status == "direct_failed")
+    duplicate_skipped_count = sum(1 for m in move_results if m.status == "duplicate_skipped")
     applied_failure_count = sum(1 for m in move_results if m.status == "applied_failed")
     applied_success_count = sum(1 for m in move_results if m.status == "applied_success")
 
@@ -385,6 +399,7 @@ def parse_segment(segment: str, segment_index: int) -> dict[str, Any]:
         "raw_llm_response_json": raw_llm_json,
         "llm_move_count": llm_move_count,
         "direct_failure_count": direct_failure_count,
+        "duplicate_skipped_count": duplicate_skipped_count,
         "applied_failure_count": applied_failure_count,
         "applied_success_count": applied_success_count,
         "move_results": [asdict(m) for m in move_results],
@@ -415,6 +430,7 @@ def parse_log(log_text: str, target_agent: str = "EAGLE") -> dict[str, Any]:
         "segment_count": len(parsed_segments),
         "llm_move_count": sum(s["llm_move_count"] for s in parsed_segments),
         "direct_failure_count": sum(s["direct_failure_count"] for s in parsed_segments),
+        "duplicate_skipped_count": sum(s["duplicate_skipped_count"] for s in parsed_segments),
         "applied_failure_count": sum(s["applied_failure_count"] for s in parsed_segments),
         "applied_success_count": sum(s["applied_success_count"] for s in parsed_segments),
     }

@@ -67,6 +67,7 @@ class Evaluator:
         # print(f"Parsed log summary: {summary}")
         llm_moves = summary["llm_move_count"]
         direct_failure_count = summary["direct_failure_count"]
+        duplicate_skipped_count = summary["duplicate_skipped_count"]
         applied_failure_count = summary["applied_failure_count"]
         applied_success_count = summary["applied_success_count"]
 
@@ -74,7 +75,7 @@ class Evaluator:
         # fitness: [0, 1]
         if llm_moves == 0:
             return 0.0
-        fitness = (applied_success_count + 0.5 * applied_failure_count) / llm_moves
+        fitness = (applied_success_count + 0.5 * applied_failure_count - 0.1 * duplicate_skipped_count - 0.3 * direct_failure_count) / llm_moves
 
         return fitness
 
