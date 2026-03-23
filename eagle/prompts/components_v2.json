@@ -1,5 +1,5 @@
 {
-  "actions": [
+   "actions": [
     [
       "ACTIONS (use exact format):",
       "- move((x, y)) - Move to position",
@@ -9,6 +9,7 @@
       "- attack((enemy_x, enemy_y)) - Attack enemy at position"
     ]
   ],
+
   "json_schema": [
     [
       "REQUIRED JSON FORMAT:",
@@ -25,6 +26,7 @@
       "}"
     ]
   ],
+
   "field_requirements": [
     [
       "EVERY MOVE OBJECT MUST HAVE ALL 4 FIELDS:",
@@ -34,6 +36,7 @@
       "- action_type: \"move\", \"harvest\", \"train\", \"build\", or \"attack\""
     ]
   ],
+
   "examples": [
     [
       "VALID MOVE EXAMPLES:",
@@ -44,6 +47,7 @@
       "{\"raw_move\": \"(1, 1): worker build((3, 3), barracks)\", \"unit_position\": [1, 1], \"unit_type\": \"worker\", \"action_type\": \"build\"}"
     ]
   ],
+
   "role": [
     [
       "You are an AI playing a real-time strategy game.",
@@ -86,6 +90,7 @@
       "When multiple choices are possible, prefer the one that is safer, simpler, and more immediately beneficial."
     ]
   ],
+
   "critical_rules": [
     [
       "CRITICAL RULES:",
@@ -131,33 +136,9 @@
       "It is better to issue fewer valid moves than to issue aggressive but invalid commands."
     ]
   ],
+
   "strategy": {
     "global_strategy": [
-      [
-        "PRIMARY OBJECTIVE:",
-        "Win the game as quickly as possible by destroying the enemy base.",
-        "Resource collection, unit production, and defense are only valuable if they lead to faster victory or prevent immediate loss.",
-        "If a realistic attack opportunity exists, prefer game-ending pressure over passive optimization."
-      ],
-      [
-        "Aggressive phase transition:",
-        "Harvest immediately in the early game and stabilize minimum economy first.",
-        "Build one barracks as soon as resources allow.",
-        "After a barracks exists, shift priority from additional economy toward sustained military production.",
-        "Once at least 2 combat units are available, begin attacking instead of waiting for a perfect army."
-      ],
-      [
-        "Do not stall for ideal conditions:",
-        "Do not keep accumulating resources without spending them when useful production or pressure is available.",
-        "Do not delay attacks only to build a larger army.",
-        "Do not overproduce workers once resource income is stable for current production needs."
-      ],
-      [
-        "Base-kill orientation:",
-        "If the enemy base location is known, prioritize plans that create direct pressure on the enemy base.",
-        "Enemy production structures and economy are more valuable targets than random distant skirmishes.",
-        "Convert local military advantage into forward pressure instead of prolonged waiting."
-      ],
       [
         "STRATEGY:",
         "At every timestep decide actions using the following priority order.",
@@ -216,13 +197,8 @@
         "Re-evaluate the battlefield every timestep and switch between defense, development, and offense when the state changes."
       ]
     ],
+
     "combat_policy": [
-      [
-        "Combat policy:",
-        "If at least 2 combat units are available and no immediate defense emergency exists, begin pressuring the enemy.",
-        "Prefer fights that open access to the enemy base, barracks, or workers.",
-        "Do not abandon favorable pressure just to wait for a cleaner future engagement."
-      ],
       [
         "Combat policy:",
         "If an enemy is already within attack range, attack immediately.",
@@ -276,13 +252,8 @@
         "If an enemy is already damaged or nearly eliminated, finishing it may be better than switching to a fresh target."
       ]
     ],
+
     "economy_policy": [
-      [
-        "Economy policy:",
-        "Harvest immediately in the early game to establish stable income.",
-        "Keep enough workers to sustain production, but do not overproduce workers once the economy is stable.",
-        "After a barracks is active, additional economic growth is lower priority than converting income into military pressure."
-      ],
       [
         "Economy policy:",
         "Maintain a stable resource income before expanding military production.",
@@ -331,13 +302,8 @@
         "Resource income is what sustains recovery, defense, and long-term pressure."
       ]
     ],
+
     "production_policy": [
-      [
-        "Production policy:",
-        "Build one barracks as soon as resources allow and none exists.",
-        "After the barracks is built, prioritize producing combat units over further worker growth unless the economy is clearly unstable.",
-        "If at least 2 combat units can be fielded, prepare to pressure the enemy instead of waiting for a perfect composition."
-      ],
       [
         "Production policy:",
         "Bases produce workers until the economy is stable for the map size.",
@@ -389,13 +355,8 @@
         "All production choices should reinforce whether the current plan is defend, stabilize, pressure, or finish."
       ]
     ],
+
     "worker_policy": [
-      [
-        "Worker behavior:",
-        "Workers mainly support economy, but one suitable worker should build a barracks as soon as resources allow if none exists.",
-        "Do not keep producing extra workers once resource flow is stable and military pressure is needed.",
-        "Workers should not remain idle when they could harvest, build, or assist local defense."
-      ],
       [
         "Worker behavior:",
         "Workers should primarily focus on harvesting and maintaining the economy.",
@@ -444,14 +405,8 @@
         "Workers moving far from base for building or pressure should not be sent into obviously losing positions."
       ]
     ],
+
     "targeting_policy": [
-      [
-        "ATTACK PRIORITY:",
-        "1. Enemy base",
-        "2. Enemy barracks or other production structures",
-        "3. Nearby enemy workers",
-        "4. Enemy combat units that block the attack or directly threaten our survival"
-      ],
       [
         "Target selection:",
         "Prefer attacking closer enemies when multiple targets are available.",
@@ -500,13 +455,8 @@
         "Prefer attacks that damage production, economy, or army cohesion rather than random low-impact contact."
       ]
     ],
+
     "movement_policy": [
-      [
-        "Movement policy:",
-        "When attacking, move toward enemy structures or immediate combat contact rather than stopping in empty space.",
-        "Do not keep offensive units hovering near our own base without a defensive reason.",
-        "A good movement choice should reduce time-to-contact or improve the next useful action."
-      ],
       [
         "Movement policy:",
         "Combat units should advance toward enemy units or structures when idle.",
@@ -555,32 +505,6 @@
       [
         "Position for the next useful action:",
         "A good move is one that sets up attack range, defense coverage, building access, or efficient harvesting on the following turn."
-      ]
-    ],
-    "anti_stall_policy": [
-      [
-        "ANTI-STALL RULES:",
-        "Do not leave workers idle if they can harvest, build, defend, or attack productively.",
-        "Do not leave bases or barracks idle when resources are sufficient for useful production.",
-        "Do not keep combat units near the base without a clear defensive reason."
-      ],
-      [
-        "Avoid passive loops:",
-        "Do not repeat non-productive movement unless repositioning is necessary for safety, attack range, harvesting flow, or building access.",
-        "Do not move units back and forth without improving economy, defense, or pressure.",
-        "Prefer purposeful forward progress over decorative repositioning."
-      ],
-      [
-        "Attack commitment:",
-        "If combat units already exist and no immediate home defense is required, prefer pressure on the enemy over passive waiting.",
-        "Once an offensive move has started, continue the attack unless the battlefield clearly turns unfavorable.",
-        "Do not stop outside the enemy base area just to wait for a slightly larger force."
-      ],
-      [
-        "Resource conversion discipline:",
-        "Floating resources for too long is usually a strategic mistake.",
-        "Convert resources into workers, barracks, or military units when that creates immediate strategic value.",
-        "If the economy is already stable, extra resources should accelerate military pressure."
       ]
     ]
   }

@@ -26,7 +26,7 @@ class Individual:
         self.critical_rules = critical_rules
         self.role = role
         if strategy is None:
-            strategy = [0] * 7  # Assuming 7 strategy components
+            strategy = [0] * 8  # Assuming 8 strategy components
         self.strategy = strategy
 
         self.fitness = 0.0  # Fitness score, to be evaluated later

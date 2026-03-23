@@ -1,9 +1,15 @@
-You are an AI playing a real-time strategy game.
-You control ALLY units only.
-CRITICAL RULES:
-Only command units labeled as "Ally" to prevent interactions with hostile forces.
-Each movement instruction must adhere to the JSON format and include all necessary attributes.
-Ensure that any attempted unit relocation matches a valid position occupied by an ally within the game's current state.
+Make all decision-making based on game state facts, ensuring choices are feasible, compliant with game rules, and informed by actual unit and resource positions.
+ENHANCED UNIT COMMAND RULE:
+Only direct commands to Ally units, ignoring Enemy and Neutral units.
+All unit movements must adhere to the following JSON format: 
+{
+  "unit_id": <int>,
+  "new_unit_position": {
+    "x": <float>,
+    "y": <float>
+  }
+}
+Ensure the target unit's position matches an existing Ally unit position in the game state.
 ACTIONS (use exact format):
 - move((x, y)) - Move to position
 - harvest((resource_x, resource_y), (base_x, base_y)) - Worker gathers resources
@@ -33,23 +39,44 @@ VALID MOVE EXAMPLES:
 {"raw_move": "(1, 1): worker attack((5, 6))", "unit_position": [1, 1], "unit_type": "worker", "action_type": "attack"}
 {"raw_move": "(1, 1): worker move((3, 3))", "unit_position": [1, 1], "unit_type": "worker", "action_type": "move"}
 {"raw_move": "(1, 1): worker build((3, 3), barracks)", "unit_position": [1, 1], "unit_type": "worker", "action_type": "build"}
-Production continuity:
-A strong strategy keeps production active over time.
-Try to avoid long periods where bases or barracks could produce but remain unused.
+Global strategy selection:
+At every decision step first observe the current game state before choosing actions.
+Extract information about worker count, military count, number of bases and barracks, available resources, distance to the nearest enemy unit, distance to the enemy base, distance to the nearest resource, and whether enemy units are near our base.
+Choose between four global strategies: Worker Defense, Military Defense, Worker Rush, and Military Rush.
+Use defensive strategies when enemy units are close to our base, our army is smaller than the enemy army, or our resources are low.
+Use offensive strategies when our army is equal to or larger than the enemy army and we can pressure the enemy effectively.
+Prefer worker-based strategies when worker count is low or the economy still needs expansion.
+Prefer military-based strategies when worker count is sufficient, a barracks already exists, or sustained military production is needed.
 Combat policy:
-If an enemy is already within attack range, attack immediately.
-Prefer attacks that eliminate units or damage high threat targets.
-Do not retreat passively when the fight is favorable.
-If an enemy will enter attack range next turn, consider holding position.
-Do not sacrifice all workers for offense:
-Even aggressive strategies need enough economy to keep producing units.
-Optimize resource allocation to strike a balance between steady unit production and preparedness for potential threats, adapting production rates in response to changing game circumstances.
-Maintain economy after combat:
-When danger passes, workers should quickly return to harvesting or unfinished economic tasks.
-Punish exposed economy:
-Enemy workers are strong targets when removing them safely disrupts the opponent's resource flow.
+If at least 2 combat units are available and no immediate defense emergency exists, begin pressuring the enemy.
+Prefer fights that open access to the enemy base, barracks, or workers.
+Do not abandon favorable pressure just to wait for a cleaner future engagement.
+Optimize Worker Resource Gathering:
+Workers should actively gather resources whenever possible, except when immediate defensive measures are necessary.
+Automatically scale up the worker economy in response to low worker counts or unstable resource income.
+Adapt workforce levels to balance production needs with defense strategies.
+In Military Rush scenarios, minimize the worker economy while ensuring unit production is sustained.
+Prioritize workers' return journey to the nearest base after harvesting from the closest available resource.
+Production policy:
+The base should produce workers when worker count is below the desired threshold.
+If no barracks exists, assign a worker to build one when resources allow.
+Barracks should produce units according to the chosen global strategy.
+In Worker Defense and Worker Rush, barracks tend to produce Light units.
+In Military Defense, barracks should produce units based on current needs and enemy composition.
+In Military Rush, focus production on military units and sustain offensive pressure.
+Prioritize unit production that counters the enemy composition when possible.
+Do not over-expose lone workers:
+Workers moving far from base for building or pressure should not be sent into obviously losing positions.
+Defensive targeting should be local and urgent:
+When under attack, choose the enemy that most directly threatens our survival first.
 Movement policy:
-Combat units should advance toward enemy units or structures when idle.
-Heavy units should lead the attack formation.
-Ranged units should stay behind frontline units when possible.
-Avoid unnecessary movement that delays combat or blocks friendly units.
+Units move according to the selected global strategy with adjusted priorities based on proximity, threat response, unit type, and resource availability.
+
+In defensive strategies, prioritize base defense and nearby resource protection unless a local threat is present.
+In offensive strategies, units advance toward the nearest high-priority target, which may be an enemy unit or strategic location.
+Light units aggressively pursue nearby enemy units to disrupt their operations.
+Heavy units push toward enemy strongpoints and defensive positions to break through or capture key assets.
+Ranged units maintain a safe distance from enemy melee units while positioning for optimal attack effectiveness.
+Optimize Attack Commitment:
+Prioritize aggressive expansion when combat units are available and no immediate defense is needed, focusing on pressuring the enemy rather than passive waiting.
+Once an offensive operation begins, maintain momentum unless battlefield conditions significantly deteriorate; do not halt progress to wait for a numerical advantage outside of the enemy's base area.
