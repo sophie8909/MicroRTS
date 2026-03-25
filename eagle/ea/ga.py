@@ -120,13 +120,15 @@ class GA:
                 offspring = self.crossover(parent1, parent2)
                 mutated_offspring = self.mutate(offspring)
                 
-                # every 5 generations, do real evaluation, otherwise do surrogate evaluation
-                if generation % 5 == 0:
+
+                new_population.append(mutated_offspring)
+
+            for individual in new_population:
+                # randomly choose to do real evaluation or surrogate evaluation
+                if random.random() < 0.1:  # 10% chance to do real evaluation
                     self.real_evaluation(mutated_offspring)
                 else:
                     self.surrogate_evaluation(mutated_offspring)
-
-                new_population.append(mutated_offspring)
             self.population = self.environment_selection(self.population, new_population)
 
             # Save the best solution of the current generation            

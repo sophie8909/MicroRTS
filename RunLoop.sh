@@ -1,34 +1,41 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-TOTAL_RUNS=1                       # << set to 1000 for one thousand runs
-RUN_TIME_PER_GAME_SEC="${RUN_TIME_PER_GAME_SEC:-60}"  # << set default seconds per run it needs to be 500
+TOTAL_RUNS="${TOTAL_RUNS:-1}"                    # Set to 1000 for one thousand runs
+RUN_TIME_PER_GAME_SEC="${RUN_TIME_PER_GAME_SEC:-500}"  # Max seconds per run
 
 mkdir -p logs bin
+
+echo "[INFO] compiling sources..."
+find src -name '*.java' > sources.list
+javac -cp "lib/*:bin" -d bin @sources.list
 
 for ((i=1; i<=TOTAL_RUNS; i++)); do
   echo "========== RUN $i / $TOTAL_RUNS =========="
   ts="$(date +%Y-%m-%d_%H-%M-%S)"
   LOGFILE="logs/run_${ts}.log"
 
-  echo "[INFO] compiling sources..."
-  find src -name '*.java' > sources.list
-  javac -cp "lib/*:bin" -d bin @sources.list
+  echo "[INFO] starting game (max ${RUN_TIME_PER_GAME_SEC}s, exits early if game finishes)..."
 
-  echo "[INFO] starting game (will auto-stop after ${RUN_TIME_PER_GAME_SEC}s)..."
-  # java -cp "lib/*:bin" gui.frontend.FrontEnd >"$LOGFILE" 2>&1 &
-  java -cp "lib/*:bin" rts.MicroRTS >"$LOGFILE" 2>&1 &
-  game_pid=$!
+  set +e
+  timeout --signal=TERM --kill-after=2s "${RUN_TIME_PER_GAME_SEC}s" \
+    java -cp "lib/*:bin" rts.MicroRTS >"$LOGFILE" 2>&1
+  exit_code=$?
+  set -e
 
-  sleep "$RUN_TIME_PER_GAME_SEC"
+  case "$exit_code" in
+    0)
+      echo "[INFO] run $i finished normally before timeout."
+      ;;
+    124)
+      echo "[INFO] run $i reached timeout (${RUN_TIME_PER_GAME_SEC}s) and was terminated."
+      ;;
+    *)
+      echo "[WARN] run $i exited with code $exit_code."
+      ;;
+  esac
 
-  if kill -0 "$game_pid" 2>/dev/null; then
-    kill "$game_pid" 2>/dev/null || true
-    sleep 2
-    kill -0 "$game_pid" 2>/dev/null && kill -9 "$game_pid" 2>/dev/null || true
-  fi
-  wait "$game_pid" 2>/dev/null || true
-  echo "[INFO] run $i complete."
+  echo "[INFO] log saved to $LOGFILE"
   echo
 done
 

@@ -102,12 +102,14 @@ class Evaluator:
                     number_of_turns = int(parts[2])  # Assuming the format is consistent
                 except ValueError:
                     pass  # If parsing fails, keep number_of_turns as 0
-        return number_of_turns
+        
+        score = number_of_turns / 1000.0  # Normalize the score (assuming 1000 turns is a reasonable upper bound)
+        return score
 
     def calculate_fitness_score(self, log_content: str) -> float:
         
         winning_score = self.win_loss_evaluation(log_content)
-        number_of_turns_score = self.number_of_turns_evaluation(log_content) / 100
+        number_of_turns_score = self.number_of_turns_evaluation(log_content)
         game_round_score = self.game_round_available_evaluation(log_content)  # This can be used as an additional metric if desired
 
         print(f"Parsed fitness: winning_score={winning_score}, number_of_turns={number_of_turns_score}, game_round_fitness={game_round_score}")
