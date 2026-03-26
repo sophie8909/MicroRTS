@@ -27,7 +27,8 @@ class ComponentPool:
                 "production_policy": [ [ ... ] ],
                 "worker_policy": [ [ ... ] ],
                 "targeting_policy": [ [ ... ] ],
-                "movement_policy": [ [ ... ] ]
+                "movement_policy": [ [ ... ] ],
+                "anti_stale_policy": [ [ ... ] ]
             }
         }
     """

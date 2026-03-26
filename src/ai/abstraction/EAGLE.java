@@ -661,12 +661,19 @@ public class EAGLE extends AbstractionLayerAI {
                 turnPrompt + "\n" +
                 maxActionsPrompt + "\n\n" +
                 featuresPrompt + "\n";
+        String dynamicPrompt = mapPrompt + "\n" +
+                turnPrompt + "\n" +
+                maxActionsPrompt + "\n\n" +
+                featuresPrompt + "\n";
        // System.out.println("=== Prompt to LLM ===");
        // System.out.println(finalPrompt);
        // System.out.println("=====================");LLM returned String as expected
 
         // ===== Call the model (Ollama in your current version) =====
         String response = prompt(finalPrompt);
+        System.out.println("=== Dynamic Prompt ===");
+        System.out.println(dynamicPrompt);
+        System.out.println("========================");
         System.out.println("=== Raw LLM Response ===");
         System.out.println(response);
         System.out.println("========================");

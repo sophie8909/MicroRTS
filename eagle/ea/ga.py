@@ -8,6 +8,8 @@ from __future__ import annotations
 import random
 from typing import List
 
+from .basic_ea import EA
+
 from .evaluate import Evaluator
 from .component_pool import ComponentPool
 from .individual import Individual
@@ -17,74 +19,17 @@ from .crossover import Crossover
 from .mutation import Mutation
 from .environment_selection import EnvironmentSelection
 
-class GA:
-    def __init__(self, config: EAConfig, component_pool: ComponentPool):
-        self.config = config
-        self.component_pool = component_pool
-        self.population = self.initialize_population()
-    
-    def initialize_population(self) -> List[Individual]:
-        # Initialize a population of random solutions based on the component pool
-        individuals = []
-        for _ in range(self.config.population_size):
-            individual = Individual() 
-            individual.initialize_randomly(self.component_pool)
-            individuals.append(individual)
-        return individuals
-
-    def real_evaluation(self, individual: Individual) -> float:
-        # Evaluate the fitness of a solution by running it in MicroRTS and measuring performance
-        evaluator = Evaluator(self.component_pool)
-        fitness = evaluator.evaluate(individual, real_eva=True)
-        individual.fitness = fitness  # Store the fitness in the individual for later use
-        return fitness
-    
-    def surrogate_evaluation(self, individual: Individual) -> float:
-        evaluator = Evaluator(self.component_pool)
-        fitness = evaluator.evaluate(individual, real_eva=False)
-        individual.fitness = fitness  # Store the fitness in the individual for later use
-        return fitness
-    
-    def select_parents(self) -> List[Individual]:
-        # Select parents from the population using the configured selection method (e.g., binary tournament)
-        if self.config.selection_method == "random":
-            idx1 = ParentSelection.random_selection(self.population)
-            idx2 = ParentSelection.random_selection(self.population)
-            return self.population[idx1], self.population[idx2]
-
-        if self.config.selection_method == "tournament":
-            fitnesses = [ind.fitness for ind in self.population]
-            idx1 = ParentSelection.tournament_selection(
-                self.population,
-                fitnesses,
-                min(self.config.tournament_size, len(self.population)),
-            )
-            idx2 = ParentSelection.tournament_selection(
-                self.population,
-                fitnesses,
-                min(self.config.tournament_size, len(self.population)),
-            )
-            return self.population[idx1], self.population[idx2]
-
-        raise ValueError(f"Unsupported selection_method: {self.config.selection_method}")
+# inherit EA
+class GA(EA):
+    def __init__(self, config: EAConfig, component_pool: ComponentPool, opponent_list: List[str]):
+        super().__init__(config, component_pool, opponent_list)
     
 
-    def crossover(self, parent1: Individual, parent2: Individual) -> Individual:
-        # Perform crossover between two parents to produce an offspring solution (e.g., uniform crossover)
-        if self.config.crossover_method == "uniform":
-            offspring = Crossover.uniform_crossover(parent1, parent2)
-            return offspring
-        raise ValueError(f"Unsupported crossover_method: {self.config.crossover_method}")
     
-    def mutate(self, individual: Individual) -> Individual:
-        # Apply mutation to a solution with the configured mutation rate (e.g., mutate_solution function)
-        if self.config.mutation_rate > 0:
-            if random.random() < 0.5:
-                mutated_individual = Mutation.mutate_component_from_pool(individual, self.component_pool, self.config.mutation_rate)
-            else:
-                mutated_individual = Mutation.mutate_component_LLM(individual, self.component_pool, self.config.mutation_rate)
-            return mutated_individual
-        return individual
+    
+    
+
+    
 
     def environment_selection(self, current_population: List[Individual], new_population: List[Individual]) -> List[Individual]:
         # Select the next generation population from the current and new populations (e.g., elitism)
@@ -97,14 +42,12 @@ class GA:
     
     def run(self):
         
-        # log  logs/YYMMDD_HHMMSS/generation_X.txt
-        import datetime
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        log_dir = f"logs/{timestamp}"
-        import os
-        os.makedirs(log_dir, exist_ok=True)
+        log_dir = self.log_folder()
+        
         for individual in self.population:
-            self.real_evaluation(individual)
+            self.real_evaluation(individual, random.choice(self.opponent_list))
+
+        last_5_fitness = []
 
         # # Test the evaluation of a random individual
         # test_individual = Individual()
@@ -126,7 +69,8 @@ class GA:
             for individual in new_population:
                 # randomly choose to do real evaluation or surrogate evaluation
                 if random.random() < 0.1:  # 10% chance to do real evaluation
-                    self.real_evaluation(mutated_offspring)
+                    random_opponent = random.choice(self.opponent_list)
+                    self.real_evaluation(mutated_offspring, random_opponent)
                 else:
                     self.surrogate_evaluation(mutated_offspring)
             self.population = self.environment_selection(self.population, new_population)
@@ -134,19 +78,15 @@ class GA:
             # Save the best solution of the current generation            
             best_individual = max(self.population, key=lambda ind: ind.fitness)
 
+    
+            self.log_so_generation(log_dir, generation, best_individual)
             
-            log_file = f"{log_dir}/generation_{generation+1}.txt"
-            with open(log_file, "w") as f:
-                f.write(f"Generation {generation+1}\n")
-                f.write(f"Best Individual: {best_individual}\n")
-                f.write(f"Prompt:\n{Evaluator(self.component_pool).construct_prompt(best_individual)}\n")
-                f.write(f"Fitness: {best_individual.fitness}\n")
-                f.write("\nPopulation:\n")
-                for ind in self.population:
-                    f.write(f"{ind} - Fitness: {ind.fitness}\n")
+            last_5_fitness.append(best_individual.fitness)
+            if len(last_5_fitness) > 5:
+                last_5_fitness.pop(0)
+            if len(last_5_fitness) == 5 and all(fitness == last_5_fitness[0] for fitness in last_5_fitness):
+                print(f"Early stopping at generation {generation+1} due to no improvement in fitness.")
+                break
 
         # Store the components_pool in a file for later analysis
-        import json
-        components_file = f"{log_dir}/component_pool.json"
-        with open(components_file, "w") as f:
-            json.dump(self.component_pool.components, f, indent=4)
+        self.save_components(log_dir)

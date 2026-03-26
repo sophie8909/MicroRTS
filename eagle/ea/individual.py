@@ -30,6 +30,9 @@ class Individual:
         self.strategy = strategy
 
         self.fitness = 0.0  # Fitness score, to be evaluated later
+        self.game_round_num_score = 0.0
+        self.win_score = 0.0
+        self.game_round_num_score = 0.0
     
     def __repr__(self):
         return f"Individual(role={self.role}, critical_rules={self.critical_rules}, actions={self.actions}, json_schema={self.json_schema}, field_requirements={self.field_requirements}, examples={self.examples}, strategy={self.strategy})"

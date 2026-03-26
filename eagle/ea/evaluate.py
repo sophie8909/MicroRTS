@@ -16,7 +16,7 @@ class Evaluator:
         self.component_pool = component_pool
         self.repo_root = Path(__file__).resolve().parents[2]
     
-    def evaluate(self, individual: Individual, real_eva: bool) -> float:
+    def evaluate(self, individual: Individual, real_eva: bool, opponent: str):
         # Construct the prompt based on the individual's components
         prompt = self.construct_prompt(individual)
 
@@ -26,11 +26,13 @@ class Evaluator:
             f.write(prompt)
         # Simulate games in MicroRTS using the constructed prompt and measure performance
         if real_eva:
-            fitness = self.simulate_games(prompt)
+            fitness = self.simulate_games(prompt, opponent)
         else:
             fitness = self.surrogate_evaluation(prompt)
-        return fitness
-    
+
+        individual.fitness = fitness
+        
+
     def construct_prompt(self, individual: Individual) -> str:
         # Use the individual's component indices to retrieve the corresponding components from the component pool and construct a prompt string
         prompt_lines: list[str] = []
@@ -122,10 +124,25 @@ class Evaluator:
 
         return fitness
 
-
-    def simulate_games(self, prompt: str) -> float:
-        # Simulate multiple games in MicroRTS using the provided prompt and return an average fitness score based on performance against a baseline strategy
+    def set_opponent(self, opponent: str):
+        # Set the opponent strategy for the next simulation runs (this can be used to evaluate the evolved prompts against different baseline strategies in MicroRTS)
+        # This function can modify a configuration file or set an environment variable that the MicroRTS simulation reads to determine the opponent strategy.
+        config_path = self.repo_root / "resources" / "config.properties"
+        with open(config_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
         
+        with open(config_path, "w", encoding="utf-8") as f:
+            for line in lines:
+                if line.startswith("AI2="):
+                    f.write(f"AI2={opponent}\n")
+                else:
+                    f.write(line)
+
+    def simulate_games(self, prompt: str, opponent: str) -> float:
+        # Simulate multiple games in MicroRTS using the provided prompt and return an average fitness score based on performance against a baseline strategy
+
+        self.set_opponent(opponent)
+
         # call MicroRTS/RunLoop.sh to run
         import subprocess
         run_loop = self.repo_root / "RunLoop.sh"
