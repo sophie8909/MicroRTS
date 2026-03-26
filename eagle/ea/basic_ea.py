@@ -42,7 +42,7 @@ class EA:
     
     def log_so_generation(self, log_dir: str, generation: int, best_individual: Individual):
         # Log the population and their fitnesses for the current generation
-        log_path = f"{log_dir}/generation_{generation}.txt"
+        log_path = f"{log_dir}/generation_{generation+1}.txt"
         with open(log_path, "w") as f:
                 f.write(f"Generation {generation+1}\n")
                 f.write(f"Best Individual: {best_individual}\n")
