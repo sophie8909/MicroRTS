@@ -21,8 +21,6 @@ import rts.units.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.text.SimpleDateFormat;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.stream.Collectors;
 import gui.frontend.FEStatePane;
 import rts.Game;
@@ -53,7 +51,7 @@ public class EAGLE extends AbstractionLayerAI {
     // How often the LLM should act on the game state
     // NOTE: Fairness is now handled at the game level via ai_decision_interval in config.properties
     // This should be set to 1 so the LLM responds whenever the game asks
-    static final Integer LLM_INTERVAL = 1;
+    static final Integer LLM_INTERVAL = 10;
     LocalDateTime now = LocalDateTime.now();
     String timestamp = now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
 
