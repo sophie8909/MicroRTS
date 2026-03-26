@@ -89,12 +89,14 @@ class Mutation:
             new_critical_rules_index = component_pool.add_component('critical_rules', rewritten_critical_rules_component)
             mutated_individual.critical_rules = new_critical_rules_index
 
+        rewrite_stragey_list = [
+            "Rewrite this strategy",
+            "Make this strategy more aggressive",
+            "Make this strategy more defensive",
+        ]
 
         # Strategy components mutation with LLM rewrite
-        rewrite_instruction = (
-            f"Rewrite this strategy component for a MicroRTS agent, making it more effective and aligned with the game's dynamics. "
-            f"Focus on improving the strategic depth and adaptability of the component while maintaining its original intent."
-        )
+        rewrite_instruction = random.choice(rewrite_stragey_list)
         for i in range(len(mutated_individual.strategy)):
             if random.random() < mutation_rate:
                 strategy_key = component_pool.strategy_keys[i]
@@ -106,4 +108,28 @@ class Mutation:
                 new_strategy_index = component_pool.add_strategy_component(strategy_key, rewritten_strategy_component)
                 mutated_individual.strategy[i] = new_strategy_index
 
+        return mutated_individual
+
+    def modify_strategy_component(individual: Individual, component_pool: ComponentPool, mutation_rate: float) -> Individual:
+        import random
+        mutated_individual = Individual(
+            role=individual.role,
+            critical_rules=individual.critical_rules,
+            actions=individual.actions,
+            json_schema=individual.json_schema,
+            field_requirements=individual.field_requirements,
+            examples=individual.examples,
+            strategy=individual.strategy.copy()
+        )   
+
+        # remove the strategy component
+        if random.random() < 0.5:
+            random_strategy_index = random.randint(0, len(mutated_individual.strategy)-1)
+            # remove
+            mutated_individual.strategy.remove(random_strategy_index)
+        else:
+            # add a new strategy component
+            random_strategy_key = random.choice(component_pool.strategy_keys)
+            new_strategy_index = component_pool.get_random_strategy_component_index(random_strategy_key)
+            mutated_individual.strategy[random_strategy_key].append(new_strategy_index)
         return mutated_individual
