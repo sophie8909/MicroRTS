@@ -3,9 +3,12 @@ Individual class for representing a candidate solution in the genetic algorithm.
 """
 
 from __future__ import annotations
+import itertools
 from .component_pool import ComponentPool
 
 class Individual:
+    _id_counter = itertools.count()
+
     def __init__(self, 
                  critical_rules: int = 0, 
                  actions: int = 0, 
@@ -14,6 +17,7 @@ class Individual:
                  examples: int = 0, 
                  strategy: dict[str, int] | None = None,
                  role: int = 0):
+        self.id = f"ind-{next(self._id_counter)}"
         # use indices to reference components in the component pool
         # stable components (only one option, not evolved)
         self.stable_components = [actions, json_schema, field_requirements, examples]

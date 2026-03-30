@@ -3,35 +3,115 @@ This module defines the evaluation framework for the evolutionary algorithm. It 
 """
 
 from __future__ import annotations
+
+import glob
+import subprocess
 from pathlib import Path
+from typing import Any
 
 from .llm import LLM
 from .component_pool import ComponentPool
 from .individual import Individual
 from .log_parse import parse_log
+from .profiler import build_base_record, summarize_total_eval_time, timer, write_jsonl
 
 
 class Evaluator:
     def __init__(self, component_pool: ComponentPool):
         self.component_pool = component_pool
         self.repo_root = Path(__file__).resolve().parents[2]
-    
-    def evaluate(self, individual: Individual, real_eva: bool, opponent: str):
-        # Construct the prompt based on the individual's components
-        prompt = self.construct_prompt(individual)
 
-        # put prompt in a temporary file
+    def evaluate(
+        self,
+        individual: Individual,
+        real_eva: bool,
+        opponent: str | None,
+        profile_output_path: str | Path | None = None,
+        generation: int | None = None,
+    ):
+        stats: dict[str, float] = {}
+        prompt = ""
+        parsed_log: dict[str, Any] | None = None
+        winner: str | None = None
+        timeout = False
+        log_path: str | None = None
+        llm_calls = 0
+        surrogate_score: float | None = None
+
+        with timer("prompt_render_time", stats):
+            prompt = self.construct_prompt(individual)
+
         prompt_path = self.repo_root / "prompt.txt"
-        with open(prompt_path, "w", encoding="utf-8") as f:
-            f.write(prompt)
-        # Simulate games in MicroRTS using the constructed prompt and measure performance
-        # if real_eva:
-        fitness = self.simulate_games(opponent)
-        # else:
-        #     fitness = self.surrogate_evaluation(prompt)
+        with timer("bookkeeping_time", stats):
+            with open(prompt_path, "w", encoding="utf-8") as f:
+                f.write(prompt)
+
+        if real_eva:
+            fitness, simulation_meta = self.simulate_games(opponent, stats)
+            parsed_log = simulation_meta.get("parsed_log")
+            winner = simulation_meta.get("winner")
+            timeout = simulation_meta.get("timeout", False)
+            log_path = simulation_meta.get("log_path")
+            llm_calls = simulation_meta.get("llm_calls", 0)
+        else:
+            with timer("EA_operator_time", stats):
+                with timer("surrogate_time", stats):
+                    surrogate_score = self.surrogate_evaluation(prompt)
+            fitness = [surrogate_score, 0.0, 0.0]
+            llm_calls = 1
 
         individual.fitness = fitness
-        
+        summarize_total_eval_time(stats)
+
+        operator_profile = getattr(individual, "operator_profile", None)
+        if isinstance(operator_profile, dict):
+            for key in ("crossover_time", "mutation_time", "EA_operator_time"):
+                stats[key] = stats.get(key, 0.0) + operator_profile.get(key, 0.0)
+            summarize_total_eval_time(stats)
+
+        if profile_output_path is not None:
+            record = build_base_record(
+                generation=generation,
+                individual_id=getattr(individual, "id", None),
+                record_type="evaluation",
+            )
+            record.update(
+                {
+                    "evaluation_mode": "real" if real_eva else "surrogate",
+                    "opponent": opponent,
+                    "prompt_length": len(prompt),
+                    "winner": winner,
+                    "timeout": timeout,
+                    "llm_calls": llm_calls,
+                    "avg_llm_call_time": None,
+                    "max_llm_call_time": None,
+                    "game_llm_call_time": None,
+                    "ea_llm_call_time": stats.get("surrogate_time", 0.0) + (operator_profile.get("ea_llm_call_time", 0.0) if isinstance(operator_profile, dict) else 0.0),
+                    "fitness": fitness,
+                    "surrogate_score": surrogate_score if not real_eva else None,
+                    "log_path": log_path,
+                }
+            )
+            for key in (
+                "prompt_render_time",
+                "EA_operator_time",
+                "mutation_time",
+                "crossover_time",
+                "surrogate_time",
+                "game_launch_time",
+                "game_play_time",
+                "log_parse_time",
+                "bookkeeping_time",
+                "total_eval_time",
+            ):
+                record[key] = stats.get(key, 0.0)
+
+            if parsed_log is not None:
+                summary = parsed_log.get("summary", {})
+                record["parsed_summary"] = summary
+                record["llm_calls"] = summary.get("segment_count", llm_calls)
+
+            write_jsonl(record, profile_output_path)
 
     def construct_prompt(self, individual: Individual) -> str:
         # Use the individual's component indices to retrieve the corresponding components from the component pool and construct a prompt string
@@ -59,10 +139,10 @@ class Evaluator:
         # Combine the components into a single prompt string (this is a simplified example, the actual construction may be more complex)
         prompt = "\n".join(prompt_lines + strategy_components)
         return prompt
-    
+
     def game_round_available_evaluation(self, log_content: str) -> float:
         # An alternative evaluation method that analyzes the log content from a MicroRTS game to compute a fitness score based on the game rounds and available actions. This can provide a more granular assessment of the agent's performance throughout the game, rather than just the final outcome.
-        
+
         # Parse the log content to extract move results and compute fitness based on the number of successful moves, available actions, and game rounds.
         parsed_log = parse_log(log_content)
         # print(f"Parsed log: {parsed_log}")
@@ -94,10 +174,10 @@ class Evaluator:
                 else:
                     winning_score = 0.0  # Loss
         return winning_score
-    
+
     def number_of_turns_evaluation(self, log_content: str) -> int:
         # parse the log content to get the number of turns in the game
-        number_of_turns = 0    
+        number_of_turns = 0
         for line in log_content.splitlines():
             if "current time" in line:
                 parts = line.split()
@@ -105,12 +185,12 @@ class Evaluator:
                     number_of_turns = int(parts[2])  # Assuming the format is consistent
                 except ValueError:
                     pass  # If parsing fails, keep number_of_turns as 0
-        
+
         score = number_of_turns / 1000.0  # Normalize the score (assuming 1000 turns is a reasonable upper bound)
         return score
 
     def calculate_fitness_score(self, log_content: str) -> float:
-        
+
         winning_score = self.win_loss_evaluation(log_content)
         number_of_turns_score = self.number_of_turns_evaluation(log_content)
         game_round_score = self.game_round_available_evaluation(log_content)  # This can be used as an additional metric if desired
@@ -131,7 +211,7 @@ class Evaluator:
         config_path = self.repo_root / "resources" / "config.properties"
         with open(config_path, "r", encoding="utf-8") as f:
             lines = f.readlines()
-        
+
         with open(config_path, "w", encoding="utf-8") as f:
             for line in lines:
                 if line.startswith("AI2="):
@@ -139,49 +219,86 @@ class Evaluator:
                 else:
                     f.write(line)
 
-    def run_simulation(self) -> float:
+    def launch_simulation(self) -> subprocess.Popen[str]:
         # call MicroRTS/RunLoop.sh to run
-        import subprocess
         run_loop = self.repo_root / "RunLoop.sh"
-        process = subprocess.Popen(
+        return subprocess.Popen(
             [str(run_loop)],
             cwd=str(self.repo_root),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
         )
-        stdout, stderr = process.communicate()
 
-        if process.returncode != 0:
-            if stderr:
-                print(stderr)
-            return 0.0
-        
-    def get_latest_log_file(self) -> Path:
+    def get_latest_log_file(self) -> Path | None:
         # when the game end, read the result in MicroRTS/logs/run_2026-MM-DD_HH-MM-SS.log (the latest log file) to get the fitness score
-        import glob
         log_files = glob.glob(str(self.repo_root / "logs" / "run_*.log"))
         if not log_files:
             return None
         latest_log_file = sorted(log_files)[-1]
         return Path(latest_log_file)
 
-    def simulate_games(self, opponent: str) -> float:
+    def extract_winner(self, log_content: str) -> str | None:
+        for line in log_content.splitlines():
+            if "WINNER: " in line:
+                return line.split("WINNER: ", 1)[1].strip()
+        return None
+
+    def detect_timeout(self, log_content: str) -> bool:
+        lower_content = log_content.lower()
+        return "timeout" in lower_content or "timed out" in lower_content
+
+    def simulate_games(self, opponent: str | None, stats: dict[str, float]) -> tuple[float, dict[str, Any]]:
         # Simulate multiple games in MicroRTS using the provided prompt and return an average fitness score based on performance against a baseline strategy
 
-        self.set_opponent(opponent)
-        self.run_simulation()
-        
+        with timer("bookkeeping_time", stats):
+            if opponent is not None:
+                self.set_opponent(opponent)
 
-        # when the game end, read the result in MicroRTS/logs/run_2026-MM-DD_HH-MM-SS.log (the latest log file) to get the fitness score
-        # 
-        latest_log_file = self.get_latest_log_file()
-        print(f"Testing parse_fitness with log file: {latest_log_file}")
-        with open(latest_log_file, "r", encoding="utf-8") as f:
-            log_content = f.read()
+        with timer("game_launch_time", stats):
+            process = self.launch_simulation()
+
+        # This includes waiting for the game to complete and loading the produced log.
+        with timer("game_play_time", stats):
+            _, stderr = process.communicate()
+            if process.returncode != 0:
+                if stderr:
+                    print(stderr)
+                return [0.0, 0.0, 0.0], {
+                    "parsed_log": None,
+                    "winner": None,
+                    "timeout": True,
+                    "log_path": None,
+                    "llm_calls": 0,
+                }
+
+            latest_log_file = self.get_latest_log_file()
+            if latest_log_file is None:
+                return [0.0, 0.0, 0.0], {
+                    "parsed_log": None,
+                    "winner": None,
+                    "timeout": True,
+                    "log_path": None,
+                    "llm_calls": 0,
+                }
+
+            print(f"Testing parse_fitness with log file: {latest_log_file}")
+            with open(latest_log_file, "r", encoding="utf-8") as f:
+                log_content = f.read()
+
+        with timer("log_parse_time", stats):
+            parsed_log = parse_log(log_content)
+
         # parse the log content to get the fitness score
         fitness = self.calculate_fitness_score(log_content)
-        return fitness
-    
+        metadata = {
+            "parsed_log": parsed_log,
+            "winner": self.extract_winner(log_content),
+            "timeout": self.detect_timeout(log_content),
+            "log_path": str(latest_log_file),
+            "llm_calls": parsed_log.get("summary", {}).get("segment_count", 0),
+        }
+        return fitness, metadata
+
     def surrogate_evaluation(self, prompt: str) -> float:
         return LLM.ollama_evaluate_fitness(prompt)

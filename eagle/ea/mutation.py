@@ -2,6 +2,7 @@
 """
 
 from __future__ import annotations
+import time
 from .individual import Individual
 from .component_pool import ComponentPool
 from .llm import LLM
@@ -41,14 +42,15 @@ class Mutation:
         return mutated_individual
     
     @staticmethod
-    def rewrite_component_with_LLM(component: str, rewrite_instruction: str) -> str:
-        
+    def rewrite_component_with_LLM(component: str, rewrite_instruction: str) -> tuple[str, float]:
+        start = time.perf_counter()
         rewritten_role_component = LLM.ollama_rewrite_component(
             original_text=component,
             instruction=rewrite_instruction,
             model="llama3.1:8b",
         )
-        return rewritten_role_component 
+        elapsed = time.perf_counter() - start
+        return rewritten_role_component, elapsed
 
 
 
@@ -66,7 +68,8 @@ class Mutation:
             field_requirements=individual.field_requirements,
             examples=individual.examples,
             strategy=base_strategy.copy(),
-        )   
+        )
+        mutated_individual.ea_llm_call_time = 0.0
 
         # LLM rewrite for role
         if random.random() < mutation_rate:
@@ -76,7 +79,8 @@ class Mutation:
                 "for a MicroRTS agent, while preserving its original function."
             )
             original_role_component_str = component_pool.get_component_str('role', individual.role)
-            rewritten_role_component_str = Mutation.rewrite_component_with_LLM(original_role_component_str, rewrite_instruction)
+            rewritten_role_component_str, elapsed = Mutation.rewrite_component_with_LLM(original_role_component_str, rewrite_instruction)
+            mutated_individual.ea_llm_call_time += elapsed
             rewritten_role_component = component_pool.parse_component_str(rewritten_role_component_str)
 
             new_role_index = component_pool.add_component('role', rewritten_role_component)
@@ -90,7 +94,8 @@ class Mutation:
                 "in handling complex game scenarios while maintaining its core functionality."
             )
             original_critical_rules_component_str = component_pool.get_component_str('critical_rules', individual.critical_rules)
-            rewritten_critical_rules_component_str = Mutation.rewrite_component_with_LLM(original_critical_rules_component_str, rewrite_instruction)
+            rewritten_critical_rules_component_str, elapsed = Mutation.rewrite_component_with_LLM(original_critical_rules_component_str, rewrite_instruction)
+            mutated_individual.ea_llm_call_time += elapsed
             rewritten_critical_rules_component = component_pool.parse_component_str(rewritten_critical_rules_component_str)
 
             new_critical_rules_index = component_pool.add_component('critical_rules', rewritten_critical_rules_component)
@@ -110,7 +115,8 @@ class Mutation:
                     original_strategy_component_str = "\n".join(
                         component_pool.get_strategy_component(strategy_key, base_strategy[strategy_key])
                     )
-                    rewritten_strategy_component_str = Mutation.rewrite_component_with_LLM(original_strategy_component_str, rewrite_instruction)
+                    rewritten_strategy_component_str, elapsed = Mutation.rewrite_component_with_LLM(original_strategy_component_str, rewrite_instruction)
+                    mutated_individual.ea_llm_call_time += elapsed
                     rewritten_strategy_component = component_pool.parse_component_str(rewritten_strategy_component_str)
                     new_strategy_index = component_pool.add_strategy_component(strategy_key, rewritten_strategy_component)
                     mutated_individual.strategy[strategy_key] = new_strategy_index

@@ -9,14 +9,10 @@ import random
 from typing import List, Tuple
 
 from .basic_ea import EA
-from .evaluate import Evaluator
 from .component_pool import ComponentPool
 from .individual import Individual
 from .config import EAConfig
-from .parent_selection import ParentSelection
-from .crossover import Crossover
-from .mutation import Mutation
-from .environment_selection import EnvironmentSelection
+from .profiler import build_base_record, timer, write_jsonl
 
 
 class NSGA2(EA):
@@ -255,27 +251,36 @@ class NSGA2(EA):
         log_dir = self.log_folder()
 
         # Evaluate the initial population before evolution starts.
-        for individual in self.population:
-            self.real_evaluation(individual, random.choice(self.opponent_list))
+        with timer("initial_population_evaluation_time", {}):
+            for individual in self.population:
+                self.real_evaluation(individual, random.choice(self.opponent_list), generation=-1)
 
         last_5_front_signatures: List[List[Tuple]] = []
 
         for generation in range(self.config.num_generations):
-            # Generate offspring until we have at least population_size children.
+            generation_stats: dict[str, float] = {}
             offspring: List[Individual] = []
 
             while len(offspring) < self.config.population_size:
-                # Parent selection is assumed to be implemented in the base EA class.
-                parent1, parent2 = self.select_parents()
+                with timer("parent_selection_time", generation_stats):
+                    parent1, parent2 = self.select_parents()
 
-                # Crossover is assumed to return two children.
-                child = self.crossover(parent1, parent2)
+                child_stats: dict[str, float] = {}
+                with timer("offspring_generation_time", generation_stats):
+                    with timer("crossover_time", child_stats):
+                        child = self.crossover(parent1, parent2)
+                    with timer("mutation_time", child_stats):
+                        child = self.mutate(child)
 
-                # Apply mutation to both children.
-                child = self.mutate(child)
+                child.operator_profile = {
+                    "crossover_time": child_stats.get("crossover_time", 0.0),
+                    "mutation_time": child_stats.get("mutation_time", 0.0),
+                    "EA_operator_time": child_stats.get("crossover_time", 0.0) + child_stats.get("mutation_time", 0.0),
+                    "ea_llm_call_time": getattr(child, "ea_llm_call_time", 0.0),
+                }
 
-                # Evaluate children immediately after variation.
-                self.real_evaluation(child, random.choice(self.opponent_list))
+                with timer("offspring_evaluation_time", generation_stats):
+                    self.real_evaluation(child, random.choice(self.opponent_list), generation=generation)
 
                 offspring.extend([child])
 
@@ -291,7 +296,32 @@ class NSGA2(EA):
                 self.calculate_crowding_distance(front)
 
             # Environmental selection for the next generation.
-            self.population = self.select_next_generation(self.population, offspring)
+            with timer("survivor_selection_time", generation_stats):
+                self.population = self.select_next_generation(self.population, offspring)
+
+            generation_record = build_base_record(
+                generation=generation,
+                individual_id=None,
+                record_type="generation",
+            )
+            generation_record.update(
+                {
+                    "generation_time": (
+                        generation_stats.get("parent_selection_time", 0.0)
+                        + generation_stats.get("offspring_generation_time", 0.0)
+                        + generation_stats.get("offspring_evaluation_time", 0.0)
+                        + generation_stats.get("survivor_selection_time", 0.0)
+                    ),
+                    "parent_selection_time": generation_stats.get("parent_selection_time", 0.0),
+                    "offspring_generation_time": generation_stats.get("offspring_generation_time", 0.0),
+                    "offspring_evaluation_time": generation_stats.get("offspring_evaluation_time", 0.0),
+                    "survivor_selection_time": generation_stats.get("survivor_selection_time", 0.0),
+                    "population_size": len(self.population),
+                    "offspring_count": len(offspring),
+                    "log_dir": log_dir,
+                }
+            )
+            write_jsonl(generation_record, self.get_generation_profile_log_path())
 
             # Log the current generation's Pareto fronts.
             self.log_mo_generation(log_dir, generation, pareto_fronts)

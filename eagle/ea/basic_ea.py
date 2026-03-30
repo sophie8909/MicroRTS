@@ -2,7 +2,10 @@
 Base class for evolutionary algorithms.
 """
 
+from __future__ import annotations
+
 import random
+from pathlib import Path
 from typing import List
 
 from .config import EAConfig
@@ -21,6 +24,7 @@ class EA:
         self.component_pool = component_pool
         self.opponent_list = opponent_list
         self.population = self.initialize_population()
+        self.current_log_dir: Path | None = None
 
     def initialize_population(self) -> List[Individual]:
         # Initialize a population of random solutions based on the component pool
@@ -37,7 +41,18 @@ class EA:
         log_dir = f"logs/{timestamp}"
         import os
         os.makedirs(log_dir, exist_ok=True)
+        self.current_log_dir = Path(log_dir)
         return log_dir
+
+    def get_profile_log_path(self) -> Path:
+        if self.current_log_dir is None:
+            raise ValueError("Log directory has not been initialized yet.")
+        return self.current_log_dir / "profiles.jsonl"
+
+    def get_generation_profile_log_path(self) -> Path:
+        if self.current_log_dir is None:
+            raise ValueError("Log directory has not been initialized yet.")
+        return self.current_log_dir / "generation_profiles.jsonl"
     
     
     def log_so_generation(self, log_dir: str, generation: int, best_individual: Individual):
@@ -111,14 +126,26 @@ class EA:
             return mutated_individual
         return individual   
     
-    def real_evaluation(self, individual: Individual, opponent: str):
+    def real_evaluation(self, individual: Individual, opponent: str, generation: int | None = None):
         # Evaluate the fitness of a solution by running it in MicroRTS and measuring performance
         evaluator = Evaluator(self.component_pool)
-        evaluator.evaluate(individual, real_eva=True, opponent=opponent)
+        evaluator.evaluate(
+            individual,
+            real_eva=True,
+            opponent=opponent,
+            profile_output_path=self.get_profile_log_path(),
+            generation=generation,
+        )
 
     
-    def surrogate_evaluation(self, individual: Individual):
+    def surrogate_evaluation(self, individual: Individual, generation: int | None = None):
         evaluator = Evaluator(self.component_pool)
-        evaluator.evaluate(individual, real_eva=False, opponent=None)
+        evaluator.evaluate(
+            individual,
+            real_eva=False,
+            opponent=None,
+            profile_output_path=self.get_profile_log_path(),
+            generation=generation,
+        )
 
     

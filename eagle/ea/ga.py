@@ -9,27 +9,16 @@ import random
 from typing import List
 
 from .basic_ea import EA
-
-from .evaluate import Evaluator
 from .component_pool import ComponentPool
 from .individual import Individual
 from .config import EAConfig
-from .parent_selection import ParentSelection
-from .crossover import Crossover
-from .mutation import Mutation
 from .environment_selection import EnvironmentSelection
+from .profiler import build_base_record, summarize_total_eval_time, timer, write_jsonl
 
-# inherit EA
+
 class GA(EA):
     def __init__(self, config: EAConfig, component_pool: ComponentPool, opponent_list: List[str]):
         super().__init__(config, component_pool, opponent_list)
-    
-
-    
-    
-    
-
-    
 
     def environment_selection(self, current_population: List[Individual], new_population: List[Individual]) -> List[Individual]:
         # Select the next generation population from the current and new populations (e.g., elitism)
@@ -39,48 +28,80 @@ class GA(EA):
         raise ValueError(
             f"Unsupported environment_selection_method: {self.config.environment_selection_method}"
         )
-    
+
     def run(self):
-        
         log_dir = self.log_folder()
-        
-        #for individual in self.population:
-        #    self.real_evaluation(individual, random.choice(self.opponent_list))
 
         last_5_fitness = []
 
-        # # Test the evaluation of a random individual
-        # test_individual = Individual()
-        # test_individual.initialize_randomly(self.component_pool)
-        # fitness = self.evaluate_fitness(test_individual)
-        # print(f"Test Individual: {test_individual}")
-        # print(f"Fitness: {fitness}")
+        with timer("initial_population_evaluation_time", {}):
+            for individual in self.population:
+                self.real_evaluation(individual, random.choice(self.opponent_list), generation=0)
 
         for generation in range(self.config.num_generations):
+            generation_stats: dict[str, float] = {}
             new_population = []
-            for _ in range(self.config.population_size):
-                parent1, parent2 = self.select_parents()
-                offspring = self.crossover(parent1, parent2)
-                mutated_offspring = self.mutate(offspring)
-                
 
-                new_population.append(mutated_offspring)
+            with timer("offspring_generation_time", generation_stats):
+                for _ in range(self.config.population_size):
+                    with timer("parent_selection_time", generation_stats):
+                        parent1, parent2 = self.select_parents()
 
-            for individual in new_population:
-                # randomly choose to do real evaluation or surrogate evaluation
-                if random.random() < 0.5:  # 10% chance to do real evaluation
-                    random_opponent = random.choice(self.opponent_list)
-                    self.real_evaluation(individual, random_opponent)
-                else:
-                    self.surrogate_evaluation(individual)
-            self.population = self.environment_selection(self.population, new_population)
+                    offspring_stats: dict[str, float] = {}
+                    with timer("crossover_time", offspring_stats):
+                        offspring = self.crossover(parent1, parent2)
+                    with timer("mutation_time", offspring_stats):
+                        mutated_offspring = self.mutate(offspring)
 
-            # Save the best solution of the current generation            
+                    mutated_offspring.operator_profile = {
+                        "crossover_time": offspring_stats.get("crossover_time", 0.0),
+                        "mutation_time": offspring_stats.get("mutation_time", 0.0),
+                        "EA_operator_time": offspring_stats.get("crossover_time", 0.0) + offspring_stats.get("mutation_time", 0.0),
+                        "ea_llm_call_time": getattr(mutated_offspring, "ea_llm_call_time", 0.0),
+                    }
+                    new_population.append(mutated_offspring)
+
+            with timer("offspring_evaluation_time", generation_stats):
+                for individual in new_population:
+                    if random.random() < 0.5:
+                        random_opponent = random.choice(self.opponent_list)
+                        self.real_evaluation(individual, random_opponent, generation=generation)
+                    else:
+                        self.surrogate_evaluation(individual, generation=generation)
+
+            with timer("survivor_selection_time", generation_stats):
+                self.population = self.environment_selection(self.population, new_population)
+
+            summarize_total_eval_time(generation_stats)
+            generation_record = build_base_record(
+                generation=generation,
+                individual_id=None,
+                record_type="generation",
+            )
+            generation_record.update(
+                {
+                    "generation_time": (
+                        generation_stats.get("parent_selection_time", 0.0)
+                        + generation_stats.get("offspring_generation_time", 0.0)
+                        + generation_stats.get("offspring_evaluation_time", 0.0)
+                        + generation_stats.get("survivor_selection_time", 0.0)
+                    ),
+                    "parent_selection_time": generation_stats.get("parent_selection_time", 0.0),
+                    "offspring_generation_time": generation_stats.get("offspring_generation_time", 0.0),
+                    "offspring_evaluation_time": generation_stats.get("offspring_evaluation_time", 0.0),
+                    "survivor_selection_time": generation_stats.get("survivor_selection_time", 0.0),
+                    "population_size": len(self.population),
+                    "offspring_count": len(new_population),
+                    "log_dir": log_dir,
+                }
+            )
+            write_jsonl(generation_record, self.get_generation_profile_log_path())
+
+            # Save the best solution of the current generation
             best_individual = max(self.population, key=lambda ind: ind.fitness)
 
-    
             self.log_so_generation(log_dir, generation, best_individual)
-            
+
             last_5_fitness.append(best_individual.fitness)
             if len(last_5_fitness) > 5:
                 last_5_fitness.pop(0)
