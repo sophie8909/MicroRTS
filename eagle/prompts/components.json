@@ -582,6 +582,31 @@
         "Convert resources into workers, barracks, or military units when that creates immediate strategic value.",
         "If the economy is already stable, extra resources should accelerate military pressure."
       ]
+    ], 
+    "time_base_strategy": [
+      [
+        "TIME-BASED STRATEGY:",
+        "Early game (turns 0-100): Focus on harvesting and building a barracks.",
+        "Mid game (turns 101-200): Shift toward producing combat units and applying pressure if the enemy is vulnerable.",
+        "Late game (turns 201+): Prioritize aggressive attacks on the enemy base and production structures to secure victory."
+      ],
+      [
+        "Early game strategy:",
+        "Establish a stable economy by producing workers and harvesting resources.",
+        "Build a barracks as soon as resources allow to enable military production.",
+        "Avoid unnecessary aggression before the economy is set up unless the enemy is exposed."
+      ],
+      [
+        "Mid game strategy:",
+        "Produce combat units according to the chosen global strategy.",
+        "Begin applying pressure on the enemy if they are vulnerable or if we have a local advantage.",
+        "Maintain a balance between economy and military production based on the evolving battlefield."
+      ],
+      [
+        "Late game strategy:",
+        "Focus on aggressive attacks to destroy the enemy base and production structures.",
+        "Do not hesitate to commit to pressure if it can lead to victory, even if it risks some losses."
+      ]
     ]
   }
 }

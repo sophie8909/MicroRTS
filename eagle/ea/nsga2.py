@@ -4,11 +4,11 @@ NSGA-II implementation for multi-objective optimization of prompt components.
 
 from __future__ import annotations
 
+import math
 import random
-from typing import List
+from typing import List, Tuple
 
 from .basic_ea import EA
-
 from .evaluate import Evaluator
 from .component_pool import ComponentPool
 from .individual import Individual
@@ -18,94 +18,300 @@ from .crossover import Crossover
 from .mutation import Mutation
 from .environment_selection import EnvironmentSelection
 
-# inherit EA
+
 class NSGA2(EA):
-    def __init__(self, config: EAConfig, component_pool: ComponentPool, opponent_list: List[str]):
+    """
+    NSGA-II algorithm for multi-objective evolutionary optimization.
+
+    This implementation assumes:
+    1. Every individual has a `fitness` attribute that is a sequence of objective values.
+    2. Larger fitness values are better for every objective.
+       If one or more objectives are minimization objectives in your project,
+       you should convert them before storing them in `individual.fitness`,
+       or modify `dominates()` accordingly.
+    """
+
+    def __init__(
+        self,
+        config: EAConfig,
+        component_pool: ComponentPool,
+        opponent_list: List[str],
+    ):
         super().__init__(config, component_pool, opponent_list)
-    
+
     def dominates(self, ind1: Individual, ind2: Individual) -> bool:
-    
+        """
+        Return True if ind1 Pareto-dominates ind2.
+
+        For maximization problems, ind1 dominates ind2 if:
+        - ind1 is no worse than ind2 in all objectives, and
+        - ind1 is strictly better than ind2 in at least one objective.
+        """
+        if ind1.fitness is None or ind2.fitness is None:
+            raise ValueError("Both individuals must be evaluated before dominance comparison.")
+
+        better_in_at_least_one = False
+
+        for f1, f2 in zip(ind1.fitness, ind2.fitness):
+            if f1 < f2:
+                return False
+            if f1 > f2:
+                better_in_at_least_one = True
+
+        return better_in_at_least_one
 
     def fast_non_dominated_sort(self, population: List[Individual]) -> List[List[Individual]]:
-        # Implement the fast non-dominated sorting algorithm to sort the population into Pareto fronts
-        fronts = []
-        domination_count = [0] * len(population)
-        dominated_solutions = [[] for _ in range(len(population))]
+        """
+        Sort the population into Pareto fronts using the NSGA-II fast non-dominated sorting algorithm.
 
-        # Calculate domination relationships
-        for i in range(len(population)):
-            for j in range(i + 1, len(population)):
-                if population[i].dominates(population[j]):
+        Returns:
+            A list of fronts, where each front is a list of individuals.
+            Front 0 is the best non-dominated front.
+        """
+        if not population:
+            return []
+
+        population_size = len(population)
+        domination_count = [0] * population_size
+        dominated_solutions = [[] for _ in range(population_size)]
+        fronts: List[List[Individual]] = []
+
+        # Compute pairwise domination relationships.
+        for i in range(population_size):
+            for j in range(i + 1, population_size):
+                if self.dominates(population[i], population[j]):
                     dominated_solutions[i].append(j)
                     domination_count[j] += 1
-                elif population[j].dominates(population[i]):
+                elif self.dominates(population[j], population[i]):
                     dominated_solutions[j].append(i)
                     domination_count[i] += 1
 
-        # Create first front with non-dominated individuals
-        current_front = [i for i in range(len(population)) if domination_count[i] == 0]
-        fronts.append([population[i] for i in current_front])
+        # The first front contains all non-dominated individuals.
+        current_front_indices = [i for i in range(population_size) if domination_count[i] == 0]
+        if current_front_indices:
+            fronts.append([population[i] for i in current_front_indices])
 
-        # Generate remaining fronts
-        while current_front:
-            next_front = []
-            for i in current_front:
+        # Iteratively construct the remaining fronts.
+        while current_front_indices:
+            next_front_indices = []
+
+            for i in current_front_indices:
                 for j in dominated_solutions[i]:
                     domination_count[j] -= 1
                     if domination_count[j] == 0:
-                        next_front.append(j)
-            if next_front:
-                fronts.append([population[i] for i in next_front])
-            current_front = next_front
+                        next_front_indices.append(j)
+
+            if next_front_indices:
+                fronts.append([population[i] for i in next_front_indices])
+
+            current_front_indices = next_front_indices
 
         return fronts
 
-
     def calculate_crowding_distance(self, front: List[Individual]) -> List[float]:
-        # Calculate the crowding distance for individuals in a given Pareto front
-        pass
+        """
+        Calculate crowding distance for all individuals in one Pareto front.
 
-    def select_next_generation(self, population: List[Individual], offspring: List[Individual]) -> List[Individual]:
-        # Combine the current population and offspring, perform non-dominated sorting, and select the next generation based on Pareto fronts and crowding distance
-        pass
+        The crowding distance is a diversity estimate:
+        - Larger distance means the individual lies in a less crowded region.
+        - Boundary individuals are assigned infinity.
 
+        This method also stores the result in each individual as `crowding_distance`
+        for convenience during environmental selection.
+
+        Returns:
+            A list of crowding distances aligned with the order of `front`.
+        """
+        if not front:
+            return []
+
+        if len(front) == 1:
+            setattr(front[0], "crowding_distance", float("inf"))
+            return [float("inf")]
+
+        if len(front) == 2:
+            setattr(front[0], "crowding_distance", float("inf"))
+            setattr(front[1], "crowding_distance", float("inf"))
+            return [float("inf"), float("inf")]
+
+        num_objectives = len(front[0].fitness)
+        distance_map = {ind: 0.0 for ind in front}
+
+        # Compute distance objective by objective.
+        for m in range(num_objectives):
+            sorted_front = sorted(front, key=lambda ind: ind.fitness[m])
+
+            # Boundary points are always preserved.
+            distance_map[sorted_front[0]] = float("inf")
+            distance_map[sorted_front[-1]] = float("inf")
+
+            min_value = sorted_front[0].fitness[m]
+            max_value = sorted_front[-1].fitness[m]
+            denominator = max_value - min_value
+
+            # If all individuals have the same value on this objective,
+            # this objective contributes nothing to crowding distance.
+            if denominator == 0:
+                continue
+
+            for i in range(1, len(sorted_front) - 1):
+                # Keep infinity if the individual is already a boundary point
+                # for another objective.
+                if math.isinf(distance_map[sorted_front[i]]):
+                    continue
+
+                prev_value = sorted_front[i - 1].fitness[m]
+                next_value = sorted_front[i + 1].fitness[m]
+
+                distance_map[sorted_front[i]] += (next_value - prev_value) / denominator
+
+        # Store the distances on the individuals.
+        for ind in front:
+            setattr(ind, "crowding_distance", distance_map[ind])
+
+        # Return distances in the original front order.
+        return [distance_map[ind] for ind in front]
+
+    def select_next_generation(
+        self,
+        population: List[Individual],
+        offspring: List[Individual],
+    ) -> List[Individual]:
+        """
+        Select the next generation using NSGA-II environmental selection.
+
+        Steps:
+        1. Combine parent population and offspring.
+        2. Perform non-dominated sorting.
+        3. Add whole fronts until the next front would overflow the capacity.
+        4. For the last accepted partial front, sort by crowding distance descending
+           and keep the least crowded individuals.
+
+        Args:
+            population: Current parent population.
+            offspring: Newly generated and evaluated offspring.
+
+        Returns:
+            The next generation with size `self.config.population_size`.
+        """
+        combined_population = population + offspring
+        fronts = self.fast_non_dominated_sort(combined_population)
+
+        next_generation: List[Individual] = []
+        target_size = self.config.population_size
+
+        for front in fronts:
+            self.calculate_crowding_distance(front)
+
+            # If the whole front fits, add all of it.
+            if len(next_generation) + len(front) <= target_size:
+                next_generation.extend(front)
+                continue
+
+            # Otherwise, sort the front by crowding distance descending
+            # and fill the remaining slots.
+            remaining_slots = target_size - len(next_generation)
+            sorted_front = sorted(
+                front,
+                key=lambda ind: getattr(ind, "crowding_distance", 0.0),
+                reverse=True,
+            )
+            next_generation.extend(sorted_front[:remaining_slots])
+            break
+
+        return next_generation
+
+    def _front_signature(self, front: List[Individual]) -> List[Tuple]:
+        """
+        Create a comparable signature for a Pareto front.
+
+        This is used for a simple convergence check across generations.
+        We sort the fitness tuples so the order inside the front does not matter.
+        """
+        signature = []
+        for ind in front:
+            if ind.fitness is None:
+                signature.append(tuple())
+            else:
+                signature.append(tuple(ind.fitness))
+        signature.sort()
+        return signature
 
     def run(self) -> list:
-        # Main loop for evolving the population using NSGA-II
-        
+        """
+        Main NSGA-II optimization loop.
+
+        Workflow:
+        1. Evaluate the initial population.
+        2. Repeatedly generate offspring through selection, crossover, and mutation.
+        3. Evaluate offspring.
+        4. Perform environmental selection with non-dominated sorting and crowding distance.
+        5. Log the Pareto fronts for each generation.
+        6. Stop early if the best front remains unchanged for several generations.
+
+        Returns:
+            The final population.
+        """
         log_dir = self.log_folder()
 
+        # Evaluate the initial population before evolution starts.
         for individual in self.population:
             self.real_evaluation(individual, random.choice(self.opponent_list))
-            
-        last_5_pareto_fronts = []
-        
+
+        last_5_front_signatures: List[List[Tuple]] = []
+
         for generation in range(self.config.generations):
-        # 1. Generate offspring using selection, crossover, and mutation
-            offspring = []
-            for _ in range(self.config.population_size):
+            # Generate offspring until we have at least population_size children.
+            offspring: List[Individual] = []
+
+            while len(offspring) < self.config.population_size:
+                # Parent selection is assumed to be implemented in the base EA class.
                 parent1, parent2 = self.select_parents()
+
+                # Crossover is assumed to return two children.
                 child1, child2 = self.crossover(parent1, parent2)
+
+                # Apply mutation to both children.
                 child1 = self.mutate(child1)
                 child2 = self.mutate(child2)
+
+                # Evaluate children immediately after variation.
+                self.real_evaluation(child1, random.choice(self.opponent_list))
+                self.real_evaluation(child2, random.choice(self.opponent_list))
+
                 offspring.extend([child1, child2])
-        # 2. Combine current population and offspring
+
+            # Trim offspring in case we produced one extra pair.
+            offspring = offspring[: self.config.population_size]
+
+            # Combine parents and offspring, then compute fronts for logging.
             combined_population = self.population + offspring
-        # 3. Perform non-dominated sorting to identify Pareto fronts
             pareto_fronts = self.fast_non_dominated_sort(combined_population)
-        # 4. Calculate crowding distance for individuals in each front
+
+            # Compute crowding distance for each front.
             for front in pareto_fronts:
                 self.calculate_crowding_distance(front)
-        # 5. Select the next generation based on Pareto fronts and crowding distance
-            self.population = self.select_next_generation(combined_population, offspring)
-        # 6. Log the Pareto fronts and their fitnesses for the current generation
+
+            # Environmental selection for the next generation.
+            self.population = self.select_next_generation(self.population, offspring)
+
+            # Log the current generation's Pareto fronts.
             self.log_mo_generation(log_dir, generation, pareto_fronts)
-        # 7. Check for convergence (e.g., if the best fitness has not improved for a certain number of generations)
-            last_5_pareto_fronts.append(pareto_fronts[0]) 
-            if len(last_5_pareto_fronts) > 5:
-                last_5_pareto_fronts.pop(0)
-            # last 5 generations have the same Pareto front, terminate the evolution
-            if all(front == last_5_pareto_fronts[0] for front in last_5_pareto_fronts):   
-                break
+
+            # Simple convergence check:
+            # stop if the first Pareto front stays identical for 5 generations.
+            if pareto_fronts:
+                current_signature = self._front_signature(pareto_fronts[0])
+                last_5_front_signatures.append(current_signature)
+
+                if len(last_5_front_signatures) > 5:
+                    last_5_front_signatures.pop(0)
+
+                if (
+                    len(last_5_front_signatures) == 5
+                    and all(sig == last_5_front_signatures[0] for sig in last_5_front_signatures)
+                ):
+                    break
 
         self.save_components(log_dir)
+        return self.population

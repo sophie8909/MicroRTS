@@ -29,10 +29,9 @@ class Individual:
             strategy = [0] * 8  # Assuming 8 strategy components
         self.strategy = strategy
 
-        self.fitness = 0.0  # Fitness score, to be evaluated later
-        self.game_round_num_score = 0.0
-        self.win_score = 0.0
-        self.game_round_num_score = 0.0
+        # fitness = [win_score, number_of_turns_score, game_round_score]
+        # self.fitness = [0.0, 0.0, 0.0]  # Initialize fitness with default values
+        self.fitness = 0.0  # Initialize fitness with a single value for simplicity
     
     def __repr__(self):
         return f"Individual(role={self.role}, critical_rules={self.critical_rules}, actions={self.actions}, json_schema={self.json_schema}, field_requirements={self.field_requirements}, examples={self.examples}, strategy={self.strategy})"
