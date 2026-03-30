@@ -54,7 +54,7 @@ class EA:
 
     def log_mo_generation(self, log_dir: str, generation: int, pareto_fronts: List[List[Individual]]):
         # Log the Pareto fronts and their fitnesses for the current generation
-        log_path = f"{log_dir}/generation_{generation}_mo.txt"
+        log_path = f"{log_dir}/generation_{generation+1}_mo.txt"
         with open(log_path, "w") as f:
             f.write(f"Generation {generation+1} - Multi-objective Optimization\n")
             for i, front in enumerate(pareto_fronts):
@@ -96,7 +96,7 @@ class EA:
     def crossover(self, parent1: Individual, parent2: Individual) -> Individual:
         # Perform crossover between two parents to produce an offspring solution (e.g., uniform crossover)
         if self.config.crossover_method == "uniform":
-            offspring = Crossover.uniform_crossover(parent1, parent2)
+            offspring = Crossover.uniform_crossover(self.component_pool, parent1, parent2)
             return offspring
         raise ValueError(f"Unsupported crossover_method: {self.config.crossover_method}")
     
@@ -107,6 +107,7 @@ class EA:
                 mutated_individual = Mutation.mutate_component_from_pool(individual, self.component_pool, self.config.mutation_rate)
             else:
                 mutated_individual = Mutation.mutate_component_LLM(individual, self.component_pool, self.config.mutation_rate)
+    
             return mutated_individual
         return individual   
     

@@ -260,7 +260,7 @@ class NSGA2(EA):
 
         last_5_front_signatures: List[List[Tuple]] = []
 
-        for generation in range(self.config.generations):
+        for generation in range(self.config.num_generations):
             # Generate offspring until we have at least population_size children.
             offspring: List[Individual] = []
 
@@ -269,17 +269,15 @@ class NSGA2(EA):
                 parent1, parent2 = self.select_parents()
 
                 # Crossover is assumed to return two children.
-                child1, child2 = self.crossover(parent1, parent2)
+                child = self.crossover(parent1, parent2)
 
                 # Apply mutation to both children.
-                child1 = self.mutate(child1)
-                child2 = self.mutate(child2)
+                child = self.mutate(child)
 
                 # Evaluate children immediately after variation.
-                self.real_evaluation(child1, random.choice(self.opponent_list))
-                self.real_evaluation(child2, random.choice(self.opponent_list))
+                self.real_evaluation(child, random.choice(self.opponent_list))
 
-                offspring.extend([child1, child2])
+                offspring.extend([child])
 
             # Trim offspring in case we produced one extra pair.
             offspring = offspring[: self.config.population_size]

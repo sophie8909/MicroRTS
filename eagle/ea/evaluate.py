@@ -25,10 +25,10 @@ class Evaluator:
         with open(prompt_path, "w", encoding="utf-8") as f:
             f.write(prompt)
         # Simulate games in MicroRTS using the constructed prompt and measure performance
-        if real_eva:
-            fitness = self.simulate_games(prompt, opponent)
-        else:
-            fitness = self.surrogate_evaluation(prompt)
+        # if real_eva:
+        fitness = self.simulate_games(opponent)
+        # else:
+        #     fitness = self.surrogate_evaluation(prompt)
 
         individual.fitness = fitness
         
@@ -52,8 +52,9 @@ class Evaluator:
 
         strategy_components = [
             line
-            for i, strategy in enumerate(self.component_pool.strategy_keys)
-            for line in self.component_pool.get_strategy_component(strategy, individual.strategy[i])
+            for strategy in self.component_pool.strategy_keys
+            if strategy in individual.strategy
+            for line in self.component_pool.get_strategy_component(strategy, individual.strategy[strategy])
         ]
         # Combine the components into a single prompt string (this is a simplified example, the actual construction may be more complex)
         prompt = "\n".join(prompt_lines + strategy_components)
@@ -120,9 +121,9 @@ class Evaluator:
         # v1: winning_score
         # v2: winning_score + number_of_turns (the more turns, the better when tie)
         # v3: winning_score + number_of_turns + game_round_fitness (consider both final outcome and in-game performance)
-        fitness = winning_score * 0.4 + number_of_turns_score * 0.3 + game_round_score * 0.3
+        # fitness = winning_score * 0.6 + game_round_score * 0.4
 
-        return fitness
+        return [winning_score, number_of_turns_score, game_round_score]
 
     def set_opponent(self, opponent: str):
         # Set the opponent strategy for the next simulation runs (this can be used to evaluate the evolved prompts against different baseline strategies in MicroRTS)
@@ -138,11 +139,7 @@ class Evaluator:
                 else:
                     f.write(line)
 
-    def simulate_games(self, prompt: str, opponent: str) -> float:
-        # Simulate multiple games in MicroRTS using the provided prompt and return an average fitness score based on performance against a baseline strategy
-
-        self.set_opponent(opponent)
-
+    def run_simulation(self) -> float:
         # call MicroRTS/RunLoop.sh to run
         import subprocess
         run_loop = self.repo_root / "RunLoop.sh"
@@ -159,15 +156,26 @@ class Evaluator:
             if stderr:
                 print(stderr)
             return 0.0
+        
+    def get_latest_log_file(self) -> Path:
+        # when the game end, read the result in MicroRTS/logs/run_2026-MM-DD_HH-MM-SS.log (the latest log file) to get the fitness score
+        import glob
+        log_files = glob.glob(str(self.repo_root / "logs" / "run_*.log"))
+        if not log_files:
+            return None
+        latest_log_file = sorted(log_files)[-1]
+        return Path(latest_log_file)
+
+    def simulate_games(self, opponent: str) -> float:
+        # Simulate multiple games in MicroRTS using the provided prompt and return an average fitness score based on performance against a baseline strategy
+
+        self.set_opponent(opponent)
+        self.run_simulation()
+        
 
         # when the game end, read the result in MicroRTS/logs/run_2026-MM-DD_HH-MM-SS.log (the latest log file) to get the fitness score
         # 
-        import glob
-        import os
-        log_files = glob.glob(str(self.repo_root / "logs" / "run_*.log"))
-        if not log_files:
-            return 0.0
-        latest_log_file = sorted(log_files)[-1]
+        latest_log_file = self.get_latest_log_file()
         print(f"Testing parse_fitness with log file: {latest_log_file}")
         with open(latest_log_file, "r", encoding="utf-8") as f:
             log_content = f.read()

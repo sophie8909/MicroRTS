@@ -11,6 +11,7 @@ class Mutation:
     @staticmethod
     def mutate_component_from_pool(individual: Individual, component_pool: ComponentPool, mutation_rate: float) -> Individual:
         import random
+        base_strategy = dict(individual.strategy or {})
         mutated_individual = Individual(
             role=individual.role,
             critical_rules=individual.critical_rules,
@@ -18,7 +19,7 @@ class Mutation:
             json_schema=individual.json_schema,
             field_requirements=individual.field_requirements,
             examples=individual.examples,
-            strategy=individual.strategy.copy()
+            strategy=base_strategy.copy(),
         )
         
         # mutate evolving components
@@ -27,11 +28,16 @@ class Mutation:
         if random.random() < mutation_rate:
             mutated_individual.critical_rules = component_pool.get_random_component_index('critical_rules')
 
-        for i in range(len(mutated_individual.strategy)):
+        for strategy_key in component_pool.strategy_keys:
             if random.random() < mutation_rate:
-                strategy_key = component_pool.strategy_keys[i]
-                mutated_individual.strategy[i] = component_pool.get_random_strategy_component_index(strategy_key)
-        
+                # add or replace strategy component
+                if random.random() < 0.5:
+                    mutated_individual.strategy[strategy_key] = component_pool.get_random_strategy_component_index(strategy_key)
+                # remove strategy component
+                else:
+                    if strategy_key in mutated_individual.strategy:
+                        del mutated_individual.strategy[strategy_key]
+
         return mutated_individual
     
     @staticmethod
@@ -51,6 +57,7 @@ class Mutation:
         # using LLM rewrite
 
         import random
+        base_strategy = dict(individual.strategy or {})
         mutated_individual = Individual(
             role=individual.role,
             critical_rules=individual.critical_rules,
@@ -58,7 +65,7 @@ class Mutation:
             json_schema=individual.json_schema,
             field_requirements=individual.field_requirements,
             examples=individual.examples,
-            strategy=individual.strategy.copy()
+            strategy=base_strategy.copy(),
         )   
 
         # LLM rewrite for role
@@ -97,39 +104,15 @@ class Mutation:
 
         # Strategy components mutation with LLM rewrite
         rewrite_instruction = random.choice(rewrite_stragey_list)
-        for i in range(len(mutated_individual.strategy)):
+        for i, strategy_key in enumerate(component_pool.strategy_keys):
             if random.random() < mutation_rate:
-                strategy_key = component_pool.strategy_keys[i]
-                original_strategy_component_str = "\n".join(
-                    component_pool.get_strategy_component(strategy_key, individual.strategy[i])
-                )
-                rewritten_strategy_component_str = Mutation.rewrite_component_with_LLM(original_strategy_component_str, rewrite_instruction)
-                rewritten_strategy_component = component_pool.parse_component_str(rewritten_strategy_component_str)
-                new_strategy_index = component_pool.add_strategy_component(strategy_key, rewritten_strategy_component)
-                mutated_individual.strategy[i] = new_strategy_index
+                if strategy_key in base_strategy:
+                    original_strategy_component_str = "\n".join(
+                        component_pool.get_strategy_component(strategy_key, base_strategy[strategy_key])
+                    )
+                    rewritten_strategy_component_str = Mutation.rewrite_component_with_LLM(original_strategy_component_str, rewrite_instruction)
+                    rewritten_strategy_component = component_pool.parse_component_str(rewritten_strategy_component_str)
+                    new_strategy_index = component_pool.add_strategy_component(strategy_key, rewritten_strategy_component)
+                    mutated_individual.strategy[strategy_key] = new_strategy_index
 
-        return mutated_individual
-
-    def modify_strategy_component(individual: Individual, component_pool: ComponentPool, mutation_rate: float) -> Individual:
-        import random
-        mutated_individual = Individual(
-            role=individual.role,
-            critical_rules=individual.critical_rules,
-            actions=individual.actions,
-            json_schema=individual.json_schema,
-            field_requirements=individual.field_requirements,
-            examples=individual.examples,
-            strategy=individual.strategy.copy()
-        )   
-
-        # remove the strategy component
-        if random.random() < 0.5:
-            random_strategy_index = random.randint(0, len(mutated_individual.strategy)-1)
-            # remove
-            mutated_individual.strategy.remove(random_strategy_index)
-        else:
-            # add a new strategy component
-            random_strategy_key = random.choice(component_pool.strategy_keys)
-            new_strategy_index = component_pool.get_random_strategy_component_index(random_strategy_key)
-            mutated_individual.strategy[random_strategy_key].append(new_strategy_index)
         return mutated_individual

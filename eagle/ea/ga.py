@@ -44,8 +44,8 @@ class GA(EA):
         
         log_dir = self.log_folder()
         
-        for individual in self.population:
-            self.real_evaluation(individual, random.choice(self.opponent_list))
+        #for individual in self.population:
+        #    self.real_evaluation(individual, random.choice(self.opponent_list))
 
         last_5_fitness = []
 
@@ -68,11 +68,11 @@ class GA(EA):
 
             for individual in new_population:
                 # randomly choose to do real evaluation or surrogate evaluation
-                if random.random() < 0.1:  # 10% chance to do real evaluation
+                if random.random() < 0.5:  # 10% chance to do real evaluation
                     random_opponent = random.choice(self.opponent_list)
-                    self.real_evaluation(mutated_offspring, random_opponent)
+                    self.real_evaluation(individual, random_opponent)
                 else:
-                    self.surrogate_evaluation(mutated_offspring)
+                    self.surrogate_evaluation(individual)
             self.population = self.environment_selection(self.population, new_population)
 
             # Save the best solution of the current generation            

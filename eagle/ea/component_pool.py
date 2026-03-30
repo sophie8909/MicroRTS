@@ -33,6 +33,7 @@ class ComponentPool:
         }
     """
     
+
     def __init__(self, components: Dict[str, List[List[str]]]):
         self.components = components
         # components keys

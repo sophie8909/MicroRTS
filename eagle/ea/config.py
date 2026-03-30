@@ -8,7 +8,7 @@ from dataclasses import dataclass
 
 @dataclass
 class EAConfig:
-    algorithm: str = "ga"  # Options: "ga", "nsga2", "moead"
+    algorithm: str = "nsga2"  # Options: "ga", "nsga2", "moead"
     population_size: int = 10
     num_generations: int = 50
     mutation_rate: float = 0.1
