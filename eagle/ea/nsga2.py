@@ -325,6 +325,7 @@ class NSGA2(EA):
 
             # Log the current generation's Pareto fronts.
             self.log_mo_generation(log_dir, generation, pareto_fronts)
+            self.save_components(log_dir)
 
             # Simple convergence check:
             # stop if the first Pareto front stays identical for 5 generations.
@@ -341,5 +342,4 @@ class NSGA2(EA):
                 ):
                     break
 
-        self.save_components(log_dir)
         return self.population
