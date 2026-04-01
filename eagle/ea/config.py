@@ -12,6 +12,7 @@ class EAConfig:
     population_size: int = 5
     num_generations: int = 3
     mutation_rate: float = 0.1
+    run_time_per_game_sec: int = 10
     tournament_size: int = 3
     selection_method: str = "random"  # Options: "random", "tournament"
     crossover_method: str = "uniform"  # Options: "uniform", "one_point", "two_point"

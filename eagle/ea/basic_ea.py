@@ -67,7 +67,7 @@ class EA:
         with open(log_path, "w") as f:
                 f.write(f"Generation {generation+1}\n")
                 f.write(f"Best Individual: {best_individual}\n")
-                f.write(f"Prompt:\n{Evaluator(self.component_pool).construct_prompt(best_individual)}\n")
+                f.write(f"Prompt:\n{Evaluator(self.component_pool, self.config).construct_prompt(best_individual)}\n")
                 f.write(f"Fitness: {best_individual.fitness}\n")
                 f.write("\nPopulation:\n")
                 for ind in self.population:
@@ -82,7 +82,7 @@ class EA:
                 f.write(f"\nPareto Front {i+1}:\n")
                 for ind in front:
                     f.write(f"{ind} - Fitness: {ind.fitness}\n")
-                    f.write(f"Prompt:\n{Evaluator(self.component_pool).construct_prompt(ind)}\n")
+                    f.write(f"Prompt:\n{Evaluator(self.component_pool, self.config).construct_prompt(ind)}\n")
             
     def save_components(self, log_dir: str):
         import json
@@ -134,7 +134,7 @@ class EA:
     
     def real_evaluation(self, individual: Individual, opponent: str, generation: int | None = None):
         # Evaluate the fitness of a solution by running it in MicroRTS and measuring performance
-        evaluator = Evaluator(self.component_pool)
+        evaluator = Evaluator(self.component_pool, self.config)
         evaluator.evaluate(
             individual,
             real_eva=True,
@@ -146,7 +146,7 @@ class EA:
 
     
     def surrogate_evaluation(self, individual: Individual, generation: int | None = None):
-        evaluator = Evaluator(self.component_pool)
+        evaluator = Evaluator(self.component_pool, self.config)
         evaluator.evaluate(
             individual,
             real_eva=False,

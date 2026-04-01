@@ -5,6 +5,7 @@ This module defines the evaluation framework for the evolutionary algorithm. It 
 from __future__ import annotations
 
 import glob
+import os
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -12,6 +13,7 @@ import random
 
 from .llm import LLM
 from .component_pool import ComponentPool
+from .config import EAConfig
 from .individual import Individual
 from .log_parse import parse_log
 from .profiler import build_base_record, summarize_total_eval_time, timer, write_jsonl
@@ -19,8 +21,9 @@ from .fitness_recorder import FitnessRecorder
 from .fitness_utils import normalize_fitness
 
 class Evaluator:
-    def __init__(self, component_pool: ComponentPool):
+    def __init__(self, component_pool: ComponentPool, config: EAConfig | None = None):
         self.component_pool = component_pool
+        self.config = config or EAConfig()
         self.repo_root = Path(__file__).resolve().parents[2]
 
     def evaluate(
@@ -251,12 +254,15 @@ class Evaluator:
     def launch_simulation(self) -> subprocess.Popen[str]:
         # call MicroRTS/RunLoop.sh to run
         run_loop = self.repo_root / "RunLoop.sh"
+        env = os.environ.copy()
+        env["RUN_TIME_PER_GAME_SEC"] = str(self.config.run_time_per_game_sec)
         return subprocess.Popen(
             [str(run_loop)],
             cwd=str(self.repo_root),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
+            env=env,
         )
 
     def wait_for_simulation(self, process: subprocess.Popen[str]) -> tuple[str, str]:

@@ -106,7 +106,10 @@ def parse_ea_log(log_file: str):
 
 def final_test(current_log_dir: str, last_gen: int):
     experiment_log_folder = f"{current_log_dir}"  # Replace with the actual log folder name
-    evaluator = Evaluator(ComponentPool.from_json(f"{experiment_log_folder}/component_pool.json"))
+    evaluator = Evaluator(
+        ComponentPool.from_json(f"{experiment_log_folder}/component_pool.json"),
+        EAConfig(),
+    )
     
     last_generation_log = f"{experiment_log_folder}/generation_{last_gen}_mo.txt"  # Replace with the actual generation log file name
     individuals = parse_ea_log(last_generation_log)
