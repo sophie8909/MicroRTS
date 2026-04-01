@@ -3,6 +3,9 @@ from typing import List
 
 import requests
 import re
+import ast
+
+from .fitness_utils import normalize_fitness
 
 class LLM:
 
@@ -67,7 +70,7 @@ class LLM:
         {prompt}
         """.strip()
 
-        fallback_score = 0.0  # Default fallback score if parsing fails
+        fallback_score = [0.0, 0.0, 0.0]
         try:
             response = requests.post(
                 "http://localhost:11434/api/generate",
@@ -85,29 +88,27 @@ class LLM:
             response.raise_for_status()
             data = response.json()
             raw_output = data.get("response", "").strip()
-            # -------------------------
-            # Step 1: direct float parse
-            # -------------------------
+
+            # Step 1: parse a Python-style list directly.
+            try:
+                parsed = ast.literal_eval(raw_output)
+                return normalize_fitness(parsed)
+            except (ValueError, SyntaxError):
+                pass
+
+            # Step 2: backward-compatible single float parse.
             try:
                 score = float(raw_output)
-                return max(0.0, min(1.0, score))
+                return normalize_fitness(score)
             except ValueError:
                 pass
 
-            # -------------------------
-            # Step 2: regex fallback (extract first float)
-            # -------------------------
-            match = re.search(r"\d*\.\d+|\d+", raw_output)
-            if match:
-                try:
-                    score = float(match.group())
-                    return max(0.0, min(1.0, score))
-                except ValueError:
-                    pass
+            # Step 3: regex fallback (extract up to 3 numeric values).
+            matches = re.findall(r"-?\d*\.\d+|-?\d+", raw_output)
+            if matches:
+                return normalize_fitness(matches[:3])
 
-            # -------------------------
-            # Step 3: final fallback
-            # -------------------------
+            # Step 4: final fallback.
             return fallback_score
 
         except requests.exceptions.RequestException:

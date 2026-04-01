@@ -17,6 +17,7 @@ from .crossover import Crossover
 from .mutation import Mutation
 from .environment_selection import EnvironmentSelection
 from .fitness_recorder import FitnessRecorder
+from .fitness_utils import normalize_fitness
 from .test import final_test
 
 class EA:
@@ -98,7 +99,7 @@ class EA:
             return self.population[idx1], self.population[idx2]
 
         if self.config.selection_method == "tournament":
-            fitnesses = [ind.fitness for ind in self.population]
+            fitnesses = [normalize_fitness(ind.fitness) for ind in self.population]
             idx1 = ParentSelection.tournament_selection(
                 self.population,
                 fitnesses,

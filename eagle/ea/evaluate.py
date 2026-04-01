@@ -16,6 +16,7 @@ from .individual import Individual
 from .log_parse import parse_log
 from .profiler import build_base_record, summarize_total_eval_time, timer, write_jsonl
 from .fitness_recorder import FitnessRecorder
+from .fitness_utils import normalize_fitness
 
 class Evaluator:
     def __init__(self, component_pool: ComponentPool):
@@ -58,8 +59,10 @@ class Evaluator:
                 with timer("surrogate_time", stats):
                     surrogate_score = self.surrogate_evaluation(prompt, 
                                                                 fitness_recorder=fitness_recorder)
-            fitness = [surrogate_score, 0.0, 0.0]
+            fitness = normalize_fitness(surrogate_score)
             llm_calls = 1
+
+        fitness = normalize_fitness(fitness)
 
         fitness_recorder.record_fitness(
             {
@@ -215,7 +218,7 @@ class Evaluator:
         score = number_of_turns / 1000.0  # Normalize the score (assuming 1000 turns is a reasonable upper bound)
         return score
 
-    def calculate_fitness_score(self, log_content: str) -> float:
+    def calculate_fitness_score(self, log_content: str) -> list[float]:
 
         winning_score = self.win_loss_evaluation(log_content)
         number_of_turns_score = self.number_of_turns_evaluation(log_content)
@@ -229,7 +232,7 @@ class Evaluator:
         # v3: winning_score + number_of_turns + game_round_fitness (consider both final outcome and in-game performance)
         # fitness = winning_score * 0.6 + game_round_score * 0.4
 
-        return [winning_score, number_of_turns_score, game_round_score]
+        return normalize_fitness([winning_score, number_of_turns_score, game_round_score])
 
     def set_opponent(self, opponent: str):
         # Set the opponent strategy for the next simulation runs (this can be used to evaluate the evolved prompts against different baseline strategies in MicroRTS)
@@ -283,7 +286,7 @@ class Evaluator:
         lower_content = log_content.lower()
         return "timeout" in lower_content or "timed out" in lower_content
 
-    def simulate_games(self, opponent: str | None, stats: dict[str, float]) -> tuple[float, dict[str, Any]]:
+    def simulate_games(self, opponent: str | None, stats: dict[str, float]) -> tuple[list[float], dict[str, Any]]:
         # Simulate multiple games in MicroRTS using the provided prompt and return an average fitness score based on performance against a baseline strategy
 
         with timer("bookkeeping_time", stats):
@@ -335,7 +338,7 @@ class Evaluator:
         }
         return fitness, metadata
 
-    def surrogate_evaluation(self, prompt: str, fitness_recorder: FitnessRecorder | None = None) -> float:
+    def surrogate_evaluation(self, prompt: str, fitness_recorder: FitnessRecorder | None = None) -> list[float]:
         examples: list[list[str]] = []
 
         if fitness_recorder is not None and getattr(fitness_recorder, "records", None):
@@ -349,5 +352,4 @@ class Evaluator:
                 if p is None or f is None:
                     continue
                 examples.append([p, str(f)])
-        LLM.ollama_evaluate_fitness(prompt, example=examples)
-        return 
+        return normalize_fitness(LLM.ollama_evaluate_fitness(prompt, example=examples))

@@ -35,6 +35,43 @@ class NSGA2(EA):
     ):
         super().__init__(config, component_pool, opponent_list)
 
+    def _assign_rank_and_crowding(self, population: List[Individual]) -> List[List[Individual]]:
+        fronts = self.fast_non_dominated_sort(population)
+        for rank, front in enumerate(fronts):
+            self.calculate_crowding_distance(front)
+            for ind in front:
+                setattr(ind, "pareto_rank", rank)
+        return fronts
+
+    def _better_parent(self, ind1: Individual, ind2: Individual) -> Individual:
+        rank1 = getattr(ind1, "pareto_rank", float("inf"))
+        rank2 = getattr(ind2, "pareto_rank", float("inf"))
+        if rank1 != rank2:
+            return ind1 if rank1 < rank2 else ind2
+
+        crowd1 = getattr(ind1, "crowding_distance", 0.0)
+        crowd2 = getattr(ind2, "crowding_distance", 0.0)
+        if crowd1 != crowd2:
+            return ind1 if crowd1 > crowd2 else ind2
+
+        if self.dominates(ind1, ind2):
+            return ind1
+        if self.dominates(ind2, ind1):
+            return ind2
+        return random.choice([ind1, ind2])
+
+    def select_parents(self) -> List[Individual]:
+        if len(self.population) < 2:
+            raise ValueError("NSGA-II requires at least two individuals for parent selection.")
+
+        self._assign_rank_and_crowding(self.population)
+
+        def _pick_one() -> Individual:
+            a, b = random.sample(self.population, 2)
+            return self._better_parent(a, b)
+
+        return _pick_one(), _pick_one()
+
     def dominates(self, ind1: Individual, ind2: Individual) -> bool:
         """
         Return True if ind1 Pareto-dominates ind2.
@@ -304,11 +341,7 @@ class NSGA2(EA):
 
             # Combine parents and offspring, then compute fronts for logging.
             combined_population = self.population + offspring
-            pareto_fronts = self.fast_non_dominated_sort(combined_population)
-
-            # Compute crowding distance for each front.
-            for front in pareto_fronts:
-                self.calculate_crowding_distance(front)
+            pareto_fronts = self._assign_rank_and_crowding(combined_population)
 
             # Environmental selection for the next generation.
             with timer("survivor_selection_time", generation_stats):

@@ -8,6 +8,7 @@ import itertools
 from dataclasses import dataclass
 from typing import Any
 from .component_pool import ComponentPool
+from .fitness_utils import DEFAULT_FITNESS
 
 
 @dataclass(frozen=True)
@@ -42,7 +43,7 @@ class Individual:
         self.strategy = self._normalize_strategy(strategy)
 
         # fitness = [win_score, number_of_turns_score, game_round_score]
-        self.fitness = [0.0, 0.0, 0.0]  # Initialize fitness with default values
+        self.fitness = DEFAULT_FITNESS.copy()  # [win_score, turn_score, game_round_score]
         # self.fitness = 0.0  # Initialize fitness with a single value for simplicity
     
     @property

@@ -13,6 +13,7 @@ from .component_pool import ComponentPool
 from .individual import Individual
 from .config import EAConfig
 from .environment_selection import EnvironmentSelection
+from .fitness_utils import fitness_key
 from .profiler import build_base_record, summarize_total_eval_time, timer, write_jsonl
 
 
@@ -98,7 +99,7 @@ class GA(EA):
             write_jsonl(generation_record, self.get_generation_profile_log_path())
 
             # Save the best solution of the current generation
-            best_individual = max(self.population, key=lambda ind: ind.fitness)
+            best_individual = max(self.population, key=lambda ind: fitness_key(ind.fitness))
 
             self.log_so_generation(log_dir, generation, best_individual)
 
