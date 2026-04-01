@@ -33,6 +33,7 @@ if __name__ == "__main__":
         from .nsga2 import NSGA2
         nsga2 = NSGA2(config, component_pool, opponent_list=OPPONENT_LIST)
         nsga2.run()
+        nsga2.test_results()
     # elif config.algorithm == "moead":
     #     from .moead import MOEAD
     #     moead = MOEAD(config, component_pool)

@@ -16,7 +16,8 @@ from .parent_selection import ParentSelection
 from .crossover import Crossover
 from .mutation import Mutation
 from .environment_selection import EnvironmentSelection
-
+from .fitness_recorder import FitnessRecorder
+from .test import final_test
 
 class EA:
     def __init__(self, config: EAConfig, component_pool: ComponentPool, opponent_list: List[str]):
@@ -25,6 +26,9 @@ class EA:
         self.opponent_list = opponent_list
         self.population = self.initialize_population()
         self.current_log_dir: Path | None = None
+        self.fitness_recorder: FitnessRecorder | None = None
+        self.current_generation = 0
+
 
     def initialize_population(self) -> List[Individual]:
         # Initialize a population of random solutions based on the component pool
@@ -42,6 +46,7 @@ class EA:
         import os
         os.makedirs(log_dir, exist_ok=True)
         self.current_log_dir = Path(log_dir)
+        self.fitness_recorder = FitnessRecorder(self.current_log_dir)
         return log_dir
 
     def get_profile_log_path(self) -> Path:
@@ -135,6 +140,7 @@ class EA:
             opponent=opponent,
             profile_output_path=self.get_profile_log_path(),
             generation=generation,
+            fitness_recorder=self.fitness_recorder,
         )
 
     
@@ -146,6 +152,11 @@ class EA:
             opponent=None,
             profile_output_path=self.get_profile_log_path(),
             generation=generation,
+            fitness_recorder=self.fitness_recorder,
         )
 
     
+    def test_results(self):
+        # get the last generation log file
+        # Test the best evolved solution against a set of opponents and log the results
+        final_test(self.current_log_dir, self.current_generation)

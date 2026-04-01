@@ -8,13 +8,14 @@ import glob
 import subprocess
 from pathlib import Path
 from typing import Any
+import random
 
 from .llm import LLM
 from .component_pool import ComponentPool
 from .individual import Individual
 from .log_parse import parse_log
 from .profiler import build_base_record, summarize_total_eval_time, timer, write_jsonl
-
+from .fitness_recorder import FitnessRecorder
 
 class Evaluator:
     def __init__(self, component_pool: ComponentPool):
@@ -28,6 +29,7 @@ class Evaluator:
         opponent: str | None,
         profile_output_path: str | Path | None = None,
         generation: int | None = None,
+        fitness_recorder: FitnessRecorder | None = None,
     ):
         stats: dict[str, float] = {}
         prompt = ""
@@ -41,10 +43,8 @@ class Evaluator:
         with timer("prompt_render_time", stats):
             prompt = self.construct_prompt(individual)
 
-        prompt_path = self.repo_root / "prompt.txt"
         with timer("bookkeeping_time", stats):
-            with open(prompt_path, "w", encoding="utf-8") as f:
-                f.write(prompt)
+            self.save_prompt(prompt)
 
         if real_eva:
             fitness, simulation_meta = self.simulate_games(opponent, stats)
@@ -56,10 +56,31 @@ class Evaluator:
         else:
             with timer("EA_operator_time", stats):
                 with timer("surrogate_time", stats):
-                    surrogate_score = self.surrogate_evaluation(prompt)
+                    surrogate_score = self.surrogate_evaluation(prompt, 
+                                                                fitness_recorder=fitness_recorder)
             fitness = [surrogate_score, 0.0, 0.0]
             llm_calls = 1
 
+        fitness_recorder.record_fitness(
+            {
+                "individual_id": getattr(individual, "id", None),
+                "generation": generation,
+                "prompt": prompt,          # add for surrogate examples
+                "fitness": fitness,        # compatibility key
+                "fitness_score": fitness,  # current key
+                "opponent": opponent,
+                "evaluation_time": stats.get("total_eval_time", 0.0),
+                "components": {
+                    "critical_rules": individual.critical_rules,
+                    "actions": individual.actions,
+                    "json_schema": individual.json_schema,
+                    "field_requirements": individual.field_requirements,
+                    "examples": individual.examples,
+                    "role": individual.role,
+                    "strategy": individual.strategy,
+                }
+            }
+        )
         individual.fitness = fitness
         summarize_total_eval_time(stats)
 
@@ -112,6 +133,11 @@ class Evaluator:
                 record["llm_calls"] = summary.get("segment_count", llm_calls)
 
             write_jsonl(record, profile_output_path)
+
+    def save_prompt(self, prompt: str):
+        prompt_path = self.repo_root / "prompt.txt"
+        with open(prompt_path, "w", encoding="utf-8") as f:
+            f.write(prompt) 
 
     def construct_prompt(self, individual: Individual) -> str:
         # Use the individual's component indices to retrieve the corresponding components from the component pool and construct a prompt string
@@ -230,6 +256,15 @@ class Evaluator:
             text=True,
         )
 
+    def wait_for_simulation(self, process: subprocess.Popen[str]) -> tuple[str, str]:
+        stdout, stderr = process.communicate()
+        if process.returncode != 0:
+            print(f"Simulation process exited with code {process.returncode}")
+            if stderr:
+                print(f"Simulation error output:\n{stderr}")
+        return stdout, stderr
+
+
     def get_latest_log_file(self) -> Path | None:
         # when the game end, read the result in MicroRTS/logs/run_2026-MM-DD_HH-MM-SS.log (the latest log file) to get the fitness score
         log_files = glob.glob(str(self.repo_root / "logs" / "run_*.log"))
@@ -260,7 +295,7 @@ class Evaluator:
 
         # This includes waiting for the game to complete and loading the produced log.
         with timer("game_play_time", stats):
-            _, stderr = process.communicate()
+            _, stderr = self.wait_for_simulation(process)
             if process.returncode != 0:
                 if stderr:
                     print(stderr)
@@ -272,19 +307,19 @@ class Evaluator:
                     "llm_calls": 0,
                 }
 
-            latest_log_file = self.get_latest_log_file()
-            if latest_log_file is None:
-                return [0.0, 0.0, 0.0], {
-                    "parsed_log": None,
-                    "winner": None,
-                    "timeout": True,
-                    "log_path": None,
-                    "llm_calls": 0,
-                }
+        latest_log_file = self.get_latest_log_file()
+        if latest_log_file is None:
+            return [0.0, 0.0, 0.0], {
+                "parsed_log": None,
+                "winner": None,
+                "timeout": True,
+                "log_path": None,
+                "llm_calls": 0,
+            }
 
-            print(f"Testing parse_fitness with log file: {latest_log_file}")
-            with open(latest_log_file, "r", encoding="utf-8") as f:
-                log_content = f.read()
+        print(f"Testing parse_fitness with log file: {latest_log_file}")
+        with open(latest_log_file, "r", encoding="utf-8") as f:
+            log_content = f.read()
 
         with timer("log_parse_time", stats):
             parsed_log = parse_log(log_content)
@@ -300,5 +335,19 @@ class Evaluator:
         }
         return fitness, metadata
 
-    def surrogate_evaluation(self, prompt: str) -> float:
-        return LLM.ollama_evaluate_fitness(prompt)
+    def surrogate_evaluation(self, prompt: str, fitness_recorder: FitnessRecorder | None = None) -> float:
+        examples: list[list[str]] = []
+
+        if fitness_recorder is not None and getattr(fitness_recorder, "records", None):
+            sampled = random.sample(
+                fitness_recorder.records,
+                min(len(fitness_recorder.records), 5),
+            )
+            for record in sampled:
+                p = record.get("prompt")
+                f = record.get("fitness", record.get("fitness_score"))
+                if p is None or f is None:
+                    continue
+                examples.append([p, str(f)])
+        LLM.ollama_evaluate_fitness(prompt, example=examples)
+        return 

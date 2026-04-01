@@ -5,7 +5,16 @@ Individual class for representing a candidate solution in the genetic algorithm.
 from __future__ import annotations
 import ast
 import itertools
+from dataclasses import dataclass
+from typing import Any
 from .component_pool import ComponentPool
+
+
+@dataclass(frozen=True)
+class ComponentEntry:
+    name: str
+    value: Any
+
 
 class Individual:
     _id_counter = itertools.count()
@@ -36,6 +45,20 @@ class Individual:
         self.fitness = [0.0, 0.0, 0.0]  # Initialize fitness with default values
         # self.fitness = 0.0  # Initialize fitness with a single value for simplicity
     
+    @property
+    def components(self) -> list[ComponentEntry]:
+        # Backward-compatible view for legacy code expecting ind.components.
+        strategy_items = tuple(sorted((self.strategy or {}).items()))
+        return [
+            ComponentEntry("role", self.role),
+            ComponentEntry("critical_rules", self.critical_rules),
+            ComponentEntry("actions", self.actions),
+            ComponentEntry("json_schema", self.json_schema),
+            ComponentEntry("field_requirements", self.field_requirements),
+            ComponentEntry("examples", self.examples),
+            ComponentEntry("strategy", strategy_items),
+        ]
+
     def __repr__(self):
         return f"Individual(role={self.role}, critical_rules={self.critical_rules}, actions={self.actions}, json_schema={self.json_schema}, field_requirements={self.field_requirements}, examples={self.examples}, strategy={self.strategy})"
 

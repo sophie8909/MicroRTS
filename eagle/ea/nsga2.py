@@ -222,14 +222,26 @@ class NSGA2(EA):
         Create a comparable signature for a Pareto front.
 
         This is used for a simple convergence check across generations.
-        We sort the fitness tuples so the order inside the front does not matter.
+        We sort the components tuples so the order inside the front does not matter.
         """
-        signature = []
+        signature: List[Tuple] = []
         for ind in front:
-            if ind.fitness is None:
-                signature.append(tuple())
+            # Backward compatibility: older code may have `components`
+            if hasattr(ind, "components"):
+                sig = tuple((comp.name, comp.value) for comp in ind.components)
             else:
-                signature.append(tuple(ind.fitness))
+                strategy_items = tuple(sorted((ind.strategy or {}).items()))
+                sig = (
+                    ("role", ind.role),
+                    ("critical_rules", ind.critical_rules),
+                    ("actions", ind.actions),
+                    ("json_schema", ind.json_schema),
+                    ("field_requirements", ind.field_requirements),
+                    ("examples", ind.examples),
+                    ("strategy", strategy_items),
+                )
+            signature.append(sig)
+
         signature.sort()
         return signature
 
@@ -249,6 +261,7 @@ class NSGA2(EA):
             The final population.
         """
         log_dir = self.log_folder()
+
 
         # Evaluate the initial population before evolution starts.
         with timer("initial_population_evaluation_time", {}):
@@ -280,8 +293,10 @@ class NSGA2(EA):
                 }
 
                 with timer("offspring_evaluation_time", generation_stats):
-                    self.real_evaluation(child, random.choice(self.opponent_list), generation=generation)
-
+                    if random.random() < 0.1:
+                        self.real_evaluation(child, random.choice(self.opponent_list), generation=generation)
+                    else:
+                        self.surrogate_evaluation(child, generation=generation)
                 offspring.extend([child])
 
             # Trim offspring in case we produced one extra pair.
@@ -326,7 +341,7 @@ class NSGA2(EA):
             # Log the current generation's Pareto fronts.
             self.log_mo_generation(log_dir, generation, pareto_fronts)
             self.save_components(log_dir)
-
+            self.current_generation = generation
             # Simple convergence check:
             # stop if the first Pareto front stays identical for 5 generations.
             if pareto_fronts:

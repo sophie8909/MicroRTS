@@ -1,3 +1,6 @@
+import random
+from typing import List
+
 import requests
 import re
 
@@ -41,30 +44,39 @@ class LLM:
         data = response.json()
         return data["response"].strip()
     
+ 
 
     @staticmethod
-    def ollama_evaluate_fitness(prompt: str, model: str = "llama3.1:8b", temperature: float = 0.7) -> float:
+    def ollama_evaluate_fitness(prompt: str, example=None):
+        if example is None:
+            example = []
+        example_str = "\n".join([f"Input: {inp}\nOutput: {out}" for inp, out in example])
+        
         evaluation_prompt = f"""
-        You are evaluating the fitness of a prompt for an RTS game-playing agent based on its expected performance in a MicroRTS game.
+        You are evaluating the quality of a prompt for an RTS game-playing agent.
+        The prompt is designed to instruct an LLM to generate strategies for playing MicroRTS, a real-time strategy game.
+        The evaluation should consider:
+        1. Power: Win (1.0) or not (0.0)
+        2. Simplicity: Is the prompt concise and straightforward, without unnecessary complexity or verbosity?
+        3. Clarity: Is the prompt clear and unambiguous for an LLM to understand and follow?
 
-        Requirements:
-        - Analyze the provided prompt and assign a fitness score between 0 and 1, where 1 indicates a highly effective prompt that is likely to lead to strong performance in the game, and 0 indicates a poor prompt that is unlikely to perform well.
-        - Consider factors such as clarity, strategic depth, adaptability, and alignment with MicroRTS game dynamics when assigning the fitness score.
-        - Return ONLY the fitness score as a decimal number between 0 and 1. Do not include any explanations or additional text.
-
+        only return a list with 3 elements: [power_score, simplicity_score, clarity_score], each is a float between 0 and 1, where higher is better.
+        Example:
+        {example_str}
         Prompt to evaluate:
         {prompt}
         """.strip()
 
+        fallback_score = 0.0  # Default fallback score if parsing fails
         try:
             response = requests.post(
                 "http://localhost:11434/api/generate",
                 json={
-                    "model": model,
+                    "model": "qwen2.5-coder:7b",
                     "prompt": evaluation_prompt,
                     "stream": False,
                     "options": {
-                        "temperature": temperature,
+                        "temperature": 0.7,
                     },
                 },
                 timeout=120,
@@ -73,7 +85,6 @@ class LLM:
             response.raise_for_status()
             data = response.json()
             raw_output = data.get("response", "").strip()
-            fallback_score = 0.0  # Default fallback score if parsing fails
             # -------------------------
             # Step 1: direct float parse
             # -------------------------
