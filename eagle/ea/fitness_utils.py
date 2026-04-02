@@ -29,12 +29,12 @@ def normalize_fitness(fitness) -> list[float]:
         values = []
         for value in fitness[:FITNESS_DIMENSIONS]:
             try:
-                value = float(value.strip())
+                value = float(value)
                 if value < 0:
                     value = 0.0
                 elif value > 1:
                     value = 1.0
-                values.append(float(value))
+                values.append(value)
             except (TypeError, ValueError):
                 values.append(0.0)
         while len(values) < FITNESS_DIMENSIONS:
