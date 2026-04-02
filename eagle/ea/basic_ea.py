@@ -31,6 +31,12 @@ class EA:
         self.current_generation = 0
 
 
+    def save_config(self, log_dir: str):
+        import json
+        config_file = f"{log_dir}/config.json"
+        with open(config_file, "w") as f:
+            json.dump(self.config.__dict__, f, indent=4)
+
     def initialize_population(self) -> List[Individual]:
         # Initialize a population of random solutions based on the component pool
         individuals = []

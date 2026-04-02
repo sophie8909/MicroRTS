@@ -330,10 +330,10 @@ class NSGA2(EA):
                 }
 
                 with timer("offspring_evaluation_time", generation_stats):
-                    if random.random() < 0.1:
-                        self.real_evaluation(child, random.choice(self.opponent_list), generation=generation)
-                    else:
+                    if random.random() < self.config.surrogate_rate:
                         self.surrogate_evaluation(child, generation=generation)
+                    else:
+                        self.real_evaluation(child, random.choice(self.opponent_list), generation=generation)
                 offspring.extend([child])
 
             # Trim offspring in case we produced one extra pair.

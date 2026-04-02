@@ -63,9 +63,11 @@ class Evaluator:
                     surrogate_score = self.surrogate_evaluation(prompt, 
                                                                 fitness_recorder=fitness_recorder)
             fitness = normalize_fitness(surrogate_score)
+            
             llm_calls = 1
 
         fitness = normalize_fitness(fitness)
+        # print(fitness)
 
         fitness_recorder.record_fitness(
             {
@@ -251,9 +253,12 @@ class Evaluator:
                 else:
                     f.write(line)
 
-    def launch_simulation(self) -> subprocess.Popen[str]:
+    def launch_simulation(self, test: bool=False) -> subprocess.Popen[str]:
         # call MicroRTS/RunLoop.sh to run
-        run_loop = self.repo_root / "RunLoop.sh"
+        if test:
+            run_loop = self.repo_root / "RunLoop_5000.sh"
+        else:
+            run_loop = self.repo_root / "RunLoop.sh"
         env = os.environ.copy()
         env["RUN_TIME_PER_GAME_SEC"] = str(self.config.run_time_per_game_sec)
         return subprocess.Popen(
@@ -264,6 +269,7 @@ class Evaluator:
             text=True,
             env=env,
         )
+
 
     def wait_for_simulation(self, process: subprocess.Popen[str]) -> tuple[str, str]:
         stdout, stderr = process.communicate()
@@ -350,7 +356,7 @@ class Evaluator:
         if fitness_recorder is not None and getattr(fitness_recorder, "records", None):
             sampled = random.sample(
                 fitness_recorder.records,
-                min(len(fitness_recorder.records), 5),
+                min(len(fitness_recorder.records), 3),
             )
             for record in sampled:
                 p = record.get("prompt")

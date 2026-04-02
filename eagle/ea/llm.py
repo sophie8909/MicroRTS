@@ -50,11 +50,12 @@ class LLM:
  
 
     @staticmethod
-    def ollama_evaluate_fitness(prompt: str, example=None):
+    def ollama_evaluate_fitness(prompt: str, example=None, model: str = "llama3.1:8b",):
         if example is None:
             example = []
-        example_str = "\n".join([f"Input: {inp}\nOutput: {out}" for inp, out in example])
+        example_str = "\n".join([f"Input:\n {inp}\nOutput:\n {out}" for inp, out in example])
         
+        # print(f"Evaluating prompt with LLM:Example:\n{example_str}")
         evaluation_prompt = f"""
         You are evaluating the quality of a prompt for an RTS game-playing agent.
         The prompt is designed to instruct an LLM to generate strategies for playing MicroRTS, a real-time strategy game.
@@ -64,10 +65,12 @@ class LLM:
         3. Clarity: Is the prompt clear and unambiguous for an LLM to understand and follow?
 
         only return a list with 3 elements: [power_score, simplicity_score, clarity_score], each is a float between 0 and 1, where higher is better.
-        Example:
+        
         {example_str}
-        Prompt to evaluate:
+
+        Input:
         {prompt}
+        Output:
         """.strip()
 
         fallback_score = [0.0, 0.0, 0.0]
@@ -75,7 +78,7 @@ class LLM:
             response = requests.post(
                 "http://localhost:11434/api/generate",
                 json={
-                    "model": "qwen2.5-coder:7b",
+                    "model": model,
                     "prompt": evaluation_prompt,
                     "stream": False,
                     "options": {
@@ -88,6 +91,7 @@ class LLM:
             response.raise_for_status()
             data = response.json()
             raw_output = data.get("response", "").strip()
+            # print(f"LLM evaluation raw output: {raw_output}")
 
             # Step 1: parse a Python-style list directly.
             try:

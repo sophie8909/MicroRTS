@@ -126,7 +126,7 @@ def final_test(current_log_dir: str, last_gen: int):
                 print(f"Testing against opponent: {opponent}")
                 evaluator.set_opponent(opponent)
                 
-                process = evaluator.launch_simulation()
+                process = evaluator.launch_simulation(test=True)  # Use the test version of the RunLoop to speed up the test
                 # This includes waiting for the game to complete and loading the produced log.
                 evaluator.wait_for_simulation(process)
 

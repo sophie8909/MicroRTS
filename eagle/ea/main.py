@@ -28,11 +28,14 @@ if __name__ == "__main__":
     if config.algorithm == "ga":
         from .ga import GA
         ga = GA(config, component_pool, opponent_list=OPPONENT_LIST)
+        ga.save_config(ga.log_folder())
         ga.run()
     elif config.algorithm == "nsga2":
         from .nsga2 import NSGA2
         nsga2 = NSGA2(config, component_pool, opponent_list=OPPONENT_LIST)
+        nsga2.save_config(nsga2.log_folder())
         nsga2.run()
+        print("Running final test for NSGA2...")
         nsga2.test_results()
     # elif config.algorithm == "moead":
     #     from .moead import MOEAD
