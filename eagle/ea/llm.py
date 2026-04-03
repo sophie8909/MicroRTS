@@ -47,7 +47,47 @@ class LLM:
         data = response.json()
         return data["response"].strip()
     
- 
+    def ollama_combine_components(
+            component1: str,
+            component2: str,
+            instruction: str,
+            model: str = "llama3.1:8b",
+            temperature: float = 0.7,
+        ) -> str:
+        prompt = f"""
+        You are combining two components of a prompt for an RTS game-playing agent.
+
+        Requirements:
+        - Integrate the key elements of both components while following the instruction.
+        - Ensure the combined component is coherent and maintains the original intent.
+        - Return ONLY the combined component text without explanations or formatting.
+
+        Combine instruction:
+        {instruction}
+
+        Component 1:
+        {component1}
+
+        Component 2:
+        {component2}
+        """.strip()
+
+        response = requests.post(
+            "http://localhost:11434/api/generate",
+            json={
+                "model": model,
+                "prompt": prompt,
+                "stream": False,
+                "options": {
+                    "temperature": temperature,
+                },
+            },
+            timeout=120,
+        )
+        response.raise_for_status()
+        data = response.json()
+        return data["response"].strip()
+
 
     @staticmethod
     def ollama_evaluate_fitness(prompt: str, example=None, model: str = "llama3.1:8b",):
