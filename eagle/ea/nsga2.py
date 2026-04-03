@@ -342,10 +342,14 @@ class NSGA2(EA):
 
             # real evaluation for the offspring after assign Pareto fronts. only real evaluate the offspring in the first Pareto front to save time.
             with timer("offspring_evaluation_time", generation_stats):
-                for child in pareto_fronts[0]:  # Only evaluate the best front to save time
-                    if child in offspring:
-                        self.real_evaluation(child, random.choice(self.opponent_list), generation=generation)
-
+                cnt = 0
+                for front in pareto_fronts:
+                    for child in front:  # Only evaluate the best front to save time
+                        if child in offspring:
+                            self.real_evaluation(child, random.choice(self.opponent_list), generation=generation)
+                            cnt += 1
+                        if cnt >= self.config.population_size * self.config.real_eval_rate:  # We have evaluated enough offspring
+                            break
             # Environmental selection for the next generation.
             with timer("survivor_selection_time", generation_stats):
                 self.population = self.select_next_generation(self.population, offspring)

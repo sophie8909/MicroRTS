@@ -13,7 +13,7 @@ class EAConfig:
     num_generations: int = 50
     mutation_rate: float = 0.1
     run_time_per_game_sec: int = 500
-    surrogate_rate: float = 0.9
+    real_eval_rate: float = 0.25
     tournament_size: int = 3
     selection_method: str = "random"  # Options: "random", "tournament"
     crossover_method: str = "uniform"  # Options: "uniform", "one_point", "two_point"

@@ -62,7 +62,7 @@ class Evaluator:
                 with timer("surrogate_time", stats):
                     surrogate_score = self.surrogate_evaluation(prompt, 
                                                                 fitness_recorder=fitness_recorder)
-            fitness = normalize_fitness(surrogate_score)
+                    fitness = surrogate_score
             
             llm_calls = 1
 
@@ -98,7 +98,8 @@ class Evaluator:
                 stats[key] = stats.get(key, 0.0) + operator_profile.get(key, 0.0)
             summarize_total_eval_time(stats)
 
-        if profile_output_path is not None:
+        #  only record real evaluation results to avoid contamination from surrogate evaluation.
+        if profile_output_path is not None and real_eva:
             record = build_base_record(
                 generation=generation,
                 individual_id=getattr(individual, "id", None),
@@ -364,4 +365,13 @@ class Evaluator:
                 if p is None or f is None:
                     continue
                 examples.append([p, str(f)])
-        return normalize_fitness(LLM.ollama_evaluate_fitness(prompt, example=examples))
+        surrogate_scores = LLM.ollama_evaluate_fitness(prompt, example=examples)
+
+        estimated_power, uncertainty, simplicity, clarity = surrogate_scores
+
+        adjusted_power = max(0.0, estimated_power * 0.8 - 0.3 * uncertainty)
+
+        surrogate_scores = [adjusted_power, uncertainty, simplicity, clarity]
+
+
+        return surrogate_scores

@@ -124,6 +124,9 @@ class EA:
         # Perform crossover between two parents to produce an offspring solution (e.g., uniform crossover)
         if self.config.crossover_method == "uniform":
             offspring = Crossover.uniform_crossover(self.component_pool, parent1, parent2)
+            # assign fitness init with parent fitness to save time for surrogate evaluation. 
+            # the real fitness will be assigned after real evaluation.
+            offspring.fitness = (parent1.fitness + parent2.fitness) / 2
             return offspring
         raise ValueError(f"Unsupported crossover_method: {self.config.crossover_method}")
     

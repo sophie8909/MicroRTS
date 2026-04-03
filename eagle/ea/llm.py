@@ -90,22 +90,53 @@ class LLM:
 
 
     @staticmethod
-    def ollama_evaluate_fitness(prompt: str, example=None, model: str = "llama3.1:8b",):
+    def ollama_evaluate_fitness(
+        prompt: str,
+        example=None,
+        model: str = "llama3.1:8b",
+    ) -> list[float]:
         if example is None:
             example = []
-        example_str = "\n".join([f"Input:\n {inp}\nOutput:\n {out}" for inp, out in example])
-        
-        # print(f"Evaluating prompt with LLM:Example:\n{example_str}")
-        evaluation_prompt = f"""
-        You are evaluating the quality of a prompt for an RTS game-playing agent.
-        The prompt is designed to instruct an LLM to generate strategies for playing MicroRTS, a real-time strategy game.
-        The evaluation should consider:
-        1. Power: Win (1.0) or not (0.0)
-        2. Simplicity: Is the prompt concise and straightforward, without unnecessary complexity or verbosity?
-        3. Clarity: Is the prompt clear and unambiguous for an LLM to understand and follow?
 
-        only return a list with 3 elements: [power_score, simplicity_score, clarity_score], each is a float between 0 and 1, where higher is better.
-        
+        example_str = "\n\n".join(
+            [f"Input:\n{inp}\nOutput:\n{out}" for inp, out in example]
+        )
+
+        evaluation_prompt = f"""
+        You are evaluating a prompt used to instruct an LLM-based MicroRTS agent.
+
+        Your task is NOT to assume the agent will win just because the prompt sounds strategic.
+        You must be conservative.
+
+        Evaluate the prompt on the following four dimensions:
+
+        1. estimated_power:
+        - Estimate how likely this prompt is to produce useful in-game decisions in MicroRTS.
+        - Consider whether it gives actionable, executable, and game-relevant guidance.
+        - Do NOT assume high power unless the prompt contains concrete and operational strategy guidance.
+        - Score between 0 and 1.
+
+        2. uncertainty:
+        - Estimate how uncertain you are about the power prediction based on prompt text alone.
+        - High uncertainty means the prompt might sound good but there is insufficient evidence that it will perform well in practice.
+        - Score between 0 and 1, where 1 means highly uncertain.
+
+        3. simplicity:
+        - Is the prompt concise and free of unnecessary wording?
+        - Score between 0 and 1.
+
+        4. clarity:
+        - Is the prompt precise, unambiguous, and easy for an LLM to follow?
+        - Score between 0 and 1.
+
+        Scoring rules:
+        - Be conservative.
+        - Do not give estimated_power > 0.8 unless the prompt contains concrete operational instructions that are directly useful for MicroRTS decision-making.
+        - If the prompt is vague, generic, verbose, or only superficially strategic, reduce estimated_power and increase uncertainty.
+        - Use the full range of scores, but avoid extreme values unless strongly justified.
+        - Output only a Python-style list:
+        [estimated_power, uncertainty, simplicity, clarity]
+
         {example_str}
 
         Input:
@@ -113,7 +144,35 @@ class LLM:
         Output:
         """.strip()
 
-        fallback_score = [0.0, 0.0, 0.0]
+        fallback_score = [0.0, 1.0, 0.0, 0.0]
+
+        def clamp01(x: float) -> float:
+            return max(0.0, min(1.0, float(x)))
+
+        def normalize_fitness(values) -> list[float]:
+            """
+            Normalize the surrogate output to:
+            [estimated_power, uncertainty, simplicity, clarity]
+            """
+            if not isinstance(values, (list, tuple)):
+                return fallback_score
+
+            values = list(values)
+
+            if len(values) < 4:
+                values = values + [0.0] * (4 - len(values))
+            elif len(values) > 4:
+                values = values[:4]
+
+            normalized = [clamp01(v) for v in values]
+
+            # Keep uncertainty conservative if parsing gave something weird.
+            # If all zeros, treat it as unreliable and restore fallback.
+            if normalized == [0.0, 0.0, 0.0, 0.0]:
+                return fallback_score
+
+            return normalized
+
         try:
             response = requests.post(
                 "http://localhost:11434/api/generate",
@@ -122,7 +181,7 @@ class LLM:
                     "prompt": evaluation_prompt,
                     "stream": False,
                     "options": {
-                        "temperature": 0.7,
+                        "temperature": 0.2,
                     },
                 },
                 timeout=120,
@@ -131,34 +190,25 @@ class LLM:
             response.raise_for_status()
             data = response.json()
             raw_output = data.get("response", "").strip()
-            # print(f"LLM evaluation raw output: {raw_output}")
 
-            # Step 1: parse a Python-style list directly.
+            # Step 1: Parse a Python-style list directly.
             try:
                 parsed = ast.literal_eval(raw_output)
                 return normalize_fitness(parsed)
             except (ValueError, SyntaxError):
                 pass
 
-            # Step 2: backward-compatible single float parse.
-            try:
-                score = float(raw_output)
-                return normalize_fitness(score)
-            except ValueError:
-                pass
-
-            # Step 3: regex fallback (extract up to 3 numeric values).
+            # Step 2: Regex fallback for bracketed or noisy output.
             matches = re.findall(r"-?\d*\.\d+|-?\d+", raw_output)
             if matches:
-                return normalize_fitness(matches[:3])
+                parsed = [float(x) for x in matches[:4]]
+                return normalize_fitness(parsed)
 
-            # Step 4: final fallback.
+            # Step 3: Final fallback.
             return fallback_score
 
         except requests.exceptions.RequestException:
-            # network / timeout / connection error
             return fallback_score
 
         except Exception:
-            # anything unexpected
             return fallback_score
