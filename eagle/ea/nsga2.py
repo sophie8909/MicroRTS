@@ -328,12 +328,9 @@ class NSGA2(EA):
                     "EA_operator_time": child_stats.get("crossover_time", 0.0) + child_stats.get("mutation_time", 0.0),
                     "ea_llm_call_time": getattr(child, "ea_llm_call_time", 0.0),
                 }
-
+                # surrogate evaluation for the child before adding it to the offspring list
                 with timer("offspring_evaluation_time", generation_stats):
-                    if random.random() < self.config.surrogate_rate:
-                        self.surrogate_evaluation(child, generation=generation)
-                    else:
-                        self.real_evaluation(child, random.choice(self.opponent_list), generation=generation)
+                    self.surrogate_evaluation(child, generation=generation)
                 offspring.extend([child])
 
             # Trim offspring in case we produced one extra pair.
@@ -342,6 +339,12 @@ class NSGA2(EA):
             # Combine parents and offspring, then compute fronts for logging.
             combined_population = self.population + offspring
             pareto_fronts = self._assign_rank_and_crowding(combined_population)
+
+            # real evaluation for the offspring after assign Pareto fronts. only real evaluate the offspring in the first Pareto front to save time.
+            with timer("offspring_evaluation_time", generation_stats):
+                for child in pareto_fronts[0]:  # Only evaluate the best front to save time
+                    if child in offspring:
+                        self.real_evaluation(child, random.choice(self.opponent_list), generation=generation)
 
             # Environmental selection for the next generation.
             with timer("survivor_selection_time", generation_stats):
