@@ -53,7 +53,7 @@ class EA:
         import os
         os.makedirs(log_dir, exist_ok=True)
         self.current_log_dir = Path(log_dir)
-        self.fitness_recorder = FitnessRecorder(self.current_log_dir)
+        self.fitness_recorder = FitnessRecorder(self.current_log_dir, self.config)
         return log_dir
 
     def get_profile_log_path(self) -> Path:
@@ -126,6 +126,7 @@ class EA:
             offspring = Crossover.uniform_crossover(self.component_pool, parent1, parent2)
             # assign fitness init with parent fitness to save time for surrogate evaluation. 
             # the real fitness will be assigned after real evaluation.
+            print(parent1.fitness, parent2.fitness)
             offspring.fitness = (parent1.fitness + parent2.fitness) / 2
             return offspring
         raise ValueError(f"Unsupported crossover_method: {self.config.crossover_method}")

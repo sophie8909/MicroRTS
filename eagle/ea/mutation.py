@@ -108,9 +108,9 @@ class Mutation:
         ]
 
         # Strategy components mutation with LLM rewrite
-        rewrite_instruction = random.choice(rewrite_stragey_list)
         for i, strategy_key in enumerate(component_pool.strategy_keys):
             if random.random() < mutation_rate:
+                rewrite_instruction = random.choice(rewrite_stragey_list)
                 if strategy_key in base_strategy:
                     original_strategy_component_str = "\n".join(
                         component_pool.get_strategy_component(strategy_key, base_strategy[strategy_key])

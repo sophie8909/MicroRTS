@@ -6,13 +6,16 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .config import EAConfig
+
 class FitnessRecorder:
-    def __init__(self, log_folder: Path):
+    def __init__(self, log_folder: Path, config: EAConfig):
         self.log_path = log_folder / "fitness_records.jsonl"
         self.log_path.parent.mkdir(parents=True, exist_ok=True)
         self.records = []
         self.history_records_path =  "fitness_history.jsonl"
         self.history = []  
+        self.config = config
     
     def init_from_history(self):
         if Path(self.history_records_path).exists():
@@ -31,7 +34,8 @@ class FitnessRecorder:
         prompt_hash = hash(json.dumps(record["prompt"], sort_keys=True))
         history_record = {
             "prompt_hash": prompt_hash,
-            "fitness_score": record["fitness_score"]
+            "fitness_score": record["fitness_score"],
+            "max_run_time_sec": self.config.run_time_per_game_sec
         }
         return history_record
 

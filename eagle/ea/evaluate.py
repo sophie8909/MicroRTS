@@ -74,7 +74,7 @@ class Evaluator:
                 with timer("surrogate_time", stats):
                     surrogate_score = self.surrogate_evaluation(prompt, 
                                                                 fitness_recorder=fitness_recorder)
-                    fitness = [surrogate_score] + individual.fitness[1:] if individual.fitness else [surrogate_score, 0.0, 0.0, 0.0]
+                    fitness = [surrogate_score] + individual.fitness[1:] if individual.fitness else [surrogate_score, 0.0, 0.0]
             
             llm_calls = 1
 
