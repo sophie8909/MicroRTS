@@ -16,6 +16,121 @@
       "    - Arguments: ()"
     ]
   ],
+  "game_rules": [
+    [
+      "GAME RULES:",
+      "Two players, Player 1 (Ally) and Player 2 (Enemy) are competing to eliminate all opposing enemy units in a Real Time Strategy (RTS) game.",
+      "Each step, each player can assign actions to their units if they are not already doing an action. Each unit can only be assigned ONE action.",
+      "Players can only assign actions to their ally units.",
+      "There are 6 available actions:",
+      "move((Target_x, Target_y))",
+      "- Move unit to target location",
+      "train(Unit_Type)",
+      "- Train a unit (Base and Barracks only)",
+      "build((Target_x, Target_y), Building_Type)",
+      "- Worker builds building",
+      "- Resources are consumed from Ally base",
+      "harvest((Resource_x, Resource_y), (Ally_Base_x, Ally_Base_y))",
+      "- Worker collects resources and returns to base",
+      "attack((Enemy_x, Enemy_y))",
+      "- Attack enemy unit",
+      "idle()",
+      "- Do nothing this turn",
+      "WIN CONDITION:",
+      "- Destroy all enemy units and buildings"
+    ]
+  ],
+  "unit_types": [
+    [
+      "UNIT TYPES:",
+      "worker:",
+      "- HP: 1",
+      "- Cost: 1",
+      "- Damage: 1",
+      "- Range: 1",
+      "- Speed: 1",
+      "- Abilities: gather resources, build base, build barracks",
+      "- Trained by: base",
+      "light:",
+      "- HP: 4",
+      "- Cost: 2",
+      "- Damage: 2",
+      "- Range: 1",
+      "- Speed: 2",
+      "- Abilities: fast attacker",
+      "Trained by: barracks",
+      "heavy:",
+      "- HP: 8",
+      "- Cost: 3",
+      "- Damage: 4",
+      "- Range: 1",
+      "- Speed: 1",
+      "- Abilities: tank unit",
+      "Trained by: barracks",
+      "ranged:",
+      "- HP: 3",
+      "- Cost: 2",
+      "- Damage: 1",
+      "- Range: 3",
+      "- Speed: 1",
+      "- Abilities: long range attacker",
+      "- Trained by: barracks"
+    ]
+  ],
+  "building_types": [
+    [
+      "BUILDING TYPES:",
+      "base:",
+      "- HP: 10",
+      "- Cost: 10",
+      "- Abilities: train workers, store resources",
+      "barracks:",
+      "- HP: 5",
+      "- Cost: 5",
+      "- Abilities: train light, heavy, ranged units"
+    ]
+  ],
+  "strategy_guide": [
+    [
+      "SUGGESTED STRATEGY:",
+      "Early Game:",
+      "- Harvest nonstop",
+      "- Build barracks at 5 resources",
+      "Mid Game:",
+      "- Train army",
+      "- Hunt enemy workers",
+      "- Protect barracks",
+      "Late Game:",
+      "- Group attack",
+      "- Destroy production buildings",
+      "- Control resources"
+    ]
+  ],
+  "game_state_format": [
+    [
+      "GAME STATE FORMAT:",
+      "Map size is given",
+      "Feature locations list all units and buildings",
+      "Coordinates are zero-indexed",
+      "Units and buildings have properties:",
+      "- HP",
+      "- resources",
+      "- current_action",
+      "- available",
+      "available = true means unit can receive command"
+    ]
+  ],
+  "raw_move_format": [
+    [
+      "RAW MOVE FORMAT:",
+      "(X, Y): Unit_Type Action(Action_Arguments)",
+      "X: unit x position",
+      "Y: unit y position",
+      "Unit_Type: worker, light, heavy, ranged, base, barracks",
+      "Action: move, train, build, harvest, attack, idle",
+      "Action_Arguments: arguments for action"
+    ]
+  ],
   "json_schema": [
     [
       "REQUIRED JSON FORMAT:",
@@ -49,93 +164,6 @@
       "{\"raw_move\": \"(1, 1): worker attack((5, 6))\", \"unit_position\": [1, 1], \"unit_type\": \"worker\", \"action_type\": \"attack\"}",
       "{\"raw_move\": \"(1, 1): worker move((3, 3))\", \"unit_position\": [1, 1], \"unit_type\": \"worker\", \"action_type\": \"move\"}",
       "{\"raw_move\": \"(1, 1): worker build((3, 3), barracks)\", \"unit_position\": [1, 1], \"unit_type\": \"worker\", \"action_type\": \"build\"}"
-    ]
-  ],
-  "role": [
-    [
-      "You are an AI playing a real-time strategy game.",
-      "You control ALLY units only."
-    ],
-    [
-      "You are responsible for choosing actions for all controllable Ally units at the current timestep.",
-      "You must reason from the current game state only and produce valid commands for this turn."
-    ],
-    [
-      "Your objective is to help the Ally side win the match through efficient economy, production, positioning, and combat.",
-      "Every action should contribute to short-term survival or long-term advantage."
-    ],
-    [
-      "You act as the strategic and tactical controller for the Ally faction.",
-      "You should coordinate workers, buildings, and military units as parts of one coherent plan."
-    ],
-    [
-      "You must interpret the battlefield from the perspective of the Ally team only.",
-      "Enemy and Neutral units are observed targets, not controllable assets."
-    ],
-    [
-      "You should make decisions that are legal, executable, and grounded in the actual positions shown in the game state.",
-      "Do not invent units, buildings, resources, or map locations."
-    ],
-    [
-      "You are a turn-by-turn decision agent rather than a narrator.",
-      "Your output should focus on actionable control decisions, not long explanations."
-    ],
-    [
-      "You should balance strategy and execution.",
-      "Consider economy, production, combat, and movement together instead of treating them separately."
-    ],
-    [
-      "You should avoid wasting actions, leaving units idle unnecessarily, or issuing commands that do not support the current situation.",
-      "Each controllable Ally unit should receive a purposeful action when appropriate."
-    ],
-    [
-      "You must prioritize clarity, legality, and tactical usefulness in every response.",
-      "When multiple choices are possible, prefer the one that is safer, simpler, and more immediately beneficial."
-    ]
-  ],
-  "critical_rules": [
-    [
-      "CRITICAL RULES:",
-      "You can ONLY command units marked as \"Ally\".",
-      "NEVER command \"Enemy\" or \"Neutral\" units.",
-      "Each move MUST be a JSON object with all required fields.",
-      "The unit_position must exactly match an Ally unit position from the game state."
-    ],
-    [
-      "Never issue a command for a unit that does not currently exist in the Ally roster.",
-      "If a unit is not present in the game state, do not reference it in raw_move or unit_position."
-    ],
-    [
-      "Do not fabricate map coordinates.",
-      "Every source or target coordinate used in an action must correspond to a meaningful game location from the observed state."
-    ],
-    [
-      "Do not produce malformed JSON.",
-      "The overall output must remain valid JSON with a thinking field and a moves array."
-    ],
-    [
-      "Do not omit required fields in any move object.",
-      "Every move must contain raw_move, unit_position, unit_type, and action_type."
-    ],
-    [
-      "The unit_type field must match the acting Ally unit exactly.",
-      "Do not label a worker as a light unit, or a base as a barracks, and so on."
-    ],
-    [
-      "The action_type field must match the action written in raw_move.",
-      "For example, a raw_move using attack((x, y)) must have action_type set to \"attack\"."
-    ],
-    [
-      "Do not command enemy positions as if they were friendly unit positions.",
-      "unit_position always refers to the acting Ally unit, never the target."
-    ],
-    [
-      "Do not output commentary outside the JSON object.",
-      "Do not add markdown fences, explanations, or extra text before or after the JSON."
-    ],
-    [
-      "If no strong action is available, still preserve legality and consistency.",
-      "It is better to issue fewer valid moves than to issue aggressive but invalid commands."
     ]
   ],
   "strategy": {
@@ -449,6 +477,58 @@
       [
         "Do not over-expose lone workers:",
         "Workers moving far from base for building or pressure should not be sent into obviously losing positions."
+      ]
+    ],
+    "harassment_policy": [
+      [
+        "Harassment policy:",
+        "Look for chances to disrupt the enemy economy instead of only marching at the enemy base directly.",
+        "If enemy workers are exposed, prioritize attacking or chasing them to reduce enemy income.",
+        "Small groups may pressure resource lines, unfinished buildings, or isolated units when the trade is favorable."
+      ],
+      [
+        "Harassment policy:",
+        "Use mobile units to force the enemy to react in multiple places.",
+        "If a direct base attack is too risky, pressure enemy workers, barracks access, or harvesting paths first.",
+        "The goal is to slow enemy growth, pull defenders out of position, and create openings for a later decisive attack."
+      ],
+      [
+        "Harassment policy:",
+        "Do not commit every unit to a frontal attack when selective disruption can gain more value.",
+        "Pick off isolated workers, threaten production structures, and retreat from bad engagements before losses become severe.",
+        "Sustained interference is valuable when it weakens the enemy economy or delays their army production."
+      ]
+    ],
+    "opening_strategy": [
+      [
+        "Opening strategy: Stable economy opener.",
+        "Start by assigning workers to nonstop harvesting and secure reliable resource income.",
+        "Build a barracks as soon as resources allow, then transition into balanced military production.",
+        "This opening is strongest when the map is large or the enemy is not applying early pressure."
+      ],
+      [
+        "Opening strategy: Worker pressure opener.",
+        "Establish minimal economy, then send available workers or early units to pressure exposed enemy workers.",
+        "The aim is to interrupt enemy harvesting early and force a defensive response.",
+        "Do not overcommit if the enemy defense is already well prepared."
+      ],
+      [
+        "Opening strategy: Ranged kiting opener.",
+        "Prioritize reaching ranged unit production early, then use ranged units to harass while staying out of melee contact.",
+        "Attack enemy workers or slow melee units, then reposition to keep distance and repeat the attack cycle.",
+        "This opening is strongest when there is enough space to kite and the enemy relies on short-range units."
+      ],
+      [
+        "Opening strategy: Heavy frontline opener.",
+        "Stabilize economy, then produce heavy units early to create a durable frontline.",
+        "Use the first heavy units to absorb pressure, break through enemy defenders, and threaten buildings.",
+        "This opening is effective when direct combat around choke points or structures is likely."
+      ],
+      [
+        "Opening strategy: Disruption opener.",
+        "Use the first combat-capable units to interfere with enemy mining routes, builders, and unfinished structures.",
+        "The goal is to deny clean development rather than rushing immediately for the enemy base.",
+        "Once the opponent is disorganized, convert the advantage into stronger map control or direct base pressure."
       ]
     ],
     "targeting_policy": [

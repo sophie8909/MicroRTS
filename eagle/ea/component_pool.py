@@ -6,7 +6,7 @@ This module defines the ComponentPool class, which loads and organizes prompt co
 from __future__ import annotations
 
 import json
-from typing import Dict, List
+from typing import Any, Dict, List
 
 class ComponentPool:
     """
@@ -34,11 +34,46 @@ class ComponentPool:
     """
     
 
-    def __init__(self, components: Dict[str, List[List[str]]]):
+    def __init__(self, components: Dict[str, Any]):
         self.components = components
-        # components keys
         self.component_keys = list(self.components.keys())
-        self.strategy_keys = list(self.components["strategy"].keys())
+        self.strategy_keys = list(self.components.get("strategy", {}).keys())
+        source_game_rule_keys = [
+            key for key in self.component_keys if key != "strategy"
+        ]
+        preferred_game_rule_order = [
+            "game_rule",
+            "role",
+            "critical_rules",
+            "game_rules",
+            "unit_types",
+            "building_types",
+            "strategy_guide",
+            "game_state_format",
+            "raw_move_format",
+            "actions",
+            "json_schema",
+            "field_requirements",
+            "examples",
+        ]
+        ordered_game_rule_keys = [
+            key for key in preferred_game_rule_order
+            if key in source_game_rule_keys
+        ] + [
+            key for key in source_game_rule_keys
+            if key not in preferred_game_rule_order
+        ]
+        if "game_rule" in self.components:
+            self.game_rule_source_keys = ["game_rule"]
+            self.game_rule_components = self.components["game_rule"]
+        else:
+            self.game_rule_source_keys = ordered_game_rule_keys
+            merged_lines: list[str] = []
+            for key in self.game_rule_source_keys:
+                component_groups = self.components.get(key, [])
+                for component in component_groups:
+                    merged_lines.extend(component)
+            self.game_rule_components = [merged_lines] if merged_lines else []
         
 
     @classmethod
@@ -48,12 +83,17 @@ class ComponentPool:
         return cls(data)
 
     def has_category(self, category: str) -> bool:
+        if category == "game_rule":
+            return bool(self.game_rule_components)
         return category in self.components and bool(self.components[category])
     
     def get_component(self, category: str, index: int) -> List[str]:
-        if category not in self.components:
-            raise KeyError(f"Component category not found: {category}")
-        candidates = self.components[category]
+        if category == "game_rule":
+            candidates = self.game_rule_components
+        else:
+            if category not in self.components:
+                raise KeyError(f"Component category not found: {category}")
+            candidates = self.components[category]
         if not candidates:
             raise ValueError(f"No candidates found for component category: {category}")
         if index < 0 or index >= len(candidates):
@@ -81,14 +121,20 @@ class ComponentPool:
     
     def get_random_component_index(self, category: str) -> int:
         import random
-        if category not in self.components:
-            raise KeyError(f"Component category not found: {category}")
-        candidates = self.components[category]
+        if category == "game_rule":
+            candidates = self.game_rule_components
+        else:
+            if category not in self.components:
+                raise KeyError(f"Component category not found: {category}")
+            candidates = self.components[category]
         if not candidates:
             raise ValueError(f"No candidates found for component category: {category}")
         return random.randint(0, len(candidates) - 1)
     
     def add_component(self, category: str, component: List[str]) -> int:
+        if category == "game_rule":
+            self.game_rule_components.append(component)
+            return len(self.game_rule_components) - 1
         if category not in self.components:
             raise KeyError(f"Component category not found: {category}")
         self.components[category].append(component)

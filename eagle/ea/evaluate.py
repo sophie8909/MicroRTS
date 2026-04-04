@@ -91,12 +91,7 @@ class Evaluator:
                 "opponent": opponent,
                 "evaluation_time": stats.get("total_eval_time", 0.0),
                 "components": {
-                    "critical_rules": individual.critical_rules,
-                    "actions": individual.actions,
-                    "json_schema": individual.json_schema,
-                    "field_requirements": individual.field_requirements,
-                    "examples": individual.examples,
-                    "role": individual.role,
+                    "game_rule": individual.game_rule,
                     "strategy": individual.strategy,
                 }
             }
@@ -164,23 +159,20 @@ class Evaluator:
         # Use the individual's component indices to retrieve the corresponding components from the component pool and construct a prompt string
         prompt_lines: list[str] = []
 
-        if self.component_pool.has_category('role'):
-            prompt_lines.extend(self.component_pool.get_component('role', individual.role))
-        if self.component_pool.has_category('critical_rules'):
-            prompt_lines.extend(self.component_pool.get_component('critical_rules', individual.critical_rules))
-        if self.component_pool.has_category('actions'):
-            prompt_lines.extend(self.component_pool.get_component('actions', individual.actions))
-        if self.component_pool.has_category('json_schema'):
-            prompt_lines.extend(self.component_pool.get_component('json_schema', individual.json_schema))
-        if self.component_pool.has_category('field_requirements'):
-            prompt_lines.extend(self.component_pool.get_component('field_requirements', individual.field_requirements))
-        if self.component_pool.has_category('examples'):
-            prompt_lines.extend(self.component_pool.get_component('examples', individual.examples))
+        if self.component_pool.has_category("game_rule"):
+            prompt_lines.extend(
+                self.component_pool.get_component("game_rule", individual.game_rule)
+            )
 
-        strategy_components = [
-            line
+        strategy_order = [
+            strategy
             for strategy in self.component_pool.strategy_keys
             if strategy in individual.strategy
+        ]
+        random.Random(repr(sorted((individual.strategy or {}).items()))).shuffle(strategy_order)
+        strategy_components = [
+            line
+            for strategy in strategy_order
             for line in self.component_pool.get_strategy_component(strategy, individual.strategy[strategy])
         ]
         # Combine the components into a single prompt string (this is a simplified example, the actual construction may be more complex)

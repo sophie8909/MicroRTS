@@ -269,12 +269,7 @@ class NSGA2(EA):
             else:
                 strategy_items = tuple(sorted((ind.strategy or {}).items()))
                 sig = (
-                    ("role", ind.role),
-                    ("critical_rules", ind.critical_rules),
-                    ("actions", ind.actions),
-                    ("json_schema", ind.json_schema),
-                    ("field_requirements", ind.field_requirements),
-                    ("examples", ind.examples),
+                    ("game_rule", getattr(ind, "game_rule", 0)),
                     ("strategy", strategy_items),
                 )
             signature.append(sig)

@@ -12,13 +12,7 @@ class Crossover:
         child = Individual()
         p1_strategy = parent1.strategy or {}
         p2_strategy = parent2.strategy or {}
-
-        child.role = random.choice([parent1.role, parent2.role])
-        child.critical_rules = random.choice([parent1.critical_rules, parent2.critical_rules])
-        child.actions = random.choice([parent1.actions, parent2.actions])
-        child.json_schema = random.choice([parent1.json_schema, parent2.json_schema])
-        child.field_requirements = random.choice([parent1.field_requirements, parent2.field_requirements])
-        child.examples = random.choice([parent1.examples, parent2.examples])
+        child.game_rule = parent1.game_rule
 
         child.strategy = {}
         for strategy_key in component_pool.strategy_keys:
@@ -38,12 +32,7 @@ class Crossover:
         child = Individual()
         instruction = "Combine the following components from two parent individuals to create a child individual. " \
                         "Ensure the child maintains coherence and incorporates key elements from both parents."
-        child.role = LLM.ollama_combine_components(parent1.role, parent2.role, instruction)
-        child.critical_rules = LLM.ollama_combine_components(parent1.critical_rules, parent2.critical_rules, instruction)
-        child.actions = LLM.ollama_combine_components(parent1.actions, parent2.actions, instruction)
-        child.json_schema = LLM.ollama_combine_components(parent1.json_schema, parent2.json_schema, instruction)
-        child.field_requirements = LLM.ollama_combine_components(parent1.field_requirements, parent2.field_requirements, instruction)
-        child.examples = LLM.ollama_combine_components(parent1.examples, parent2.examples, instruction)
+        child.game_rule = parent1.game_rule
 
         child.strategy = {}
         for strategy_key in component_pool.strategy_keys:

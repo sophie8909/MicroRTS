@@ -13,21 +13,8 @@ class Mutation:
     def mutate_component_from_pool(individual: Individual, component_pool: ComponentPool, mutation_rate: float) -> Individual:
         import random
         base_strategy = dict(individual.strategy or {})
-        mutated_individual = Individual(
-            role=individual.role,
-            critical_rules=individual.critical_rules,
-            actions=individual.actions,
-            json_schema=individual.json_schema,
-            field_requirements=individual.field_requirements,
-            examples=individual.examples,
-            strategy=base_strategy.copy(),
-        )
-        
-        # mutate evolving components
-        if random.random() < mutation_rate:
-            mutated_individual.role = component_pool.get_random_component_index('role')
-        if random.random() < mutation_rate:
-            mutated_individual.critical_rules = component_pool.get_random_component_index('critical_rules')
+        mutated_individual = individual.copy()
+        mutated_individual.strategy = base_strategy.copy()
 
         for strategy_key in component_pool.strategy_keys:
             if random.random() < mutation_rate:
@@ -60,46 +47,9 @@ class Mutation:
 
         import random
         base_strategy = dict(individual.strategy or {})
-        mutated_individual = Individual(
-            role=individual.role,
-            critical_rules=individual.critical_rules,
-            actions=individual.actions,
-            json_schema=individual.json_schema,
-            field_requirements=individual.field_requirements,
-            examples=individual.examples,
-            strategy=base_strategy.copy(),
-        )
+        mutated_individual = individual.copy()
+        mutated_individual.strategy = base_strategy.copy()
         mutated_individual.ea_llm_call_time = 0.0
-
-        # LLM rewrite for role
-        if random.random() < mutation_rate:
-            # LLM rewrite for role
-            rewrite_instruction = (
-                "Make this role description clearer and slightly more directive "
-                "for a MicroRTS agent, while preserving its original function."
-            )
-            original_role_component_str = component_pool.get_component_str('role', individual.role)
-            rewritten_role_component_str, elapsed = Mutation.rewrite_component_with_LLM(original_role_component_str, rewrite_instruction)
-            mutated_individual.ea_llm_call_time += elapsed
-            rewritten_role_component = component_pool.parse_component_str(rewritten_role_component_str)
-
-            new_role_index = component_pool.add_component('role', rewritten_role_component)
-            mutated_individual.role = new_role_index
-
-        # LLM rewrite for critical_rules
-        if random.random() < mutation_rate:
-            # LLM rewrite for critical_rules
-            rewrite_instruction = (
-                "Enhance this critical rule for a MicroRTS agent, making it more robust and effective "
-                "in handling complex game scenarios while maintaining its core functionality."
-            )
-            original_critical_rules_component_str = component_pool.get_component_str('critical_rules', individual.critical_rules)
-            rewritten_critical_rules_component_str, elapsed = Mutation.rewrite_component_with_LLM(original_critical_rules_component_str, rewrite_instruction)
-            mutated_individual.ea_llm_call_time += elapsed
-            rewritten_critical_rules_component = component_pool.parse_component_str(rewritten_critical_rules_component_str)
-
-            new_critical_rules_index = component_pool.add_component('critical_rules', rewritten_critical_rules_component)
-            mutated_individual.critical_rules = new_critical_rules_index
 
         rewrite_stragey_list = [
             "Rewrite this strategy",

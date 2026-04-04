@@ -127,7 +127,10 @@ class EA:
             # assign fitness init with parent fitness to save time for surrogate evaluation. 
             # the real fitness will be assigned after real evaluation.
             print(parent1.fitness, parent2.fitness)
-            offspring.fitness = (parent1.fitness + parent2.fitness) / 2
+            offspring.fitness = [
+                (left + right) / 2
+                for left, right in zip(parent1.fitness, parent2.fitness)
+            ]
             return offspring
         raise ValueError(f"Unsupported crossover_method: {self.config.crossover_method}")
     
