@@ -27,6 +27,9 @@ SCOREBOARD_RE = re.compile(
     re.MULTILINE,
 )
 GAMEOVER_RE = re.compile(r"^\s*gs\.gameover\(\)\s*=\s*(?P<value>true|false)\s*$", re.MULTILINE)
+GAME_SETTING_AI_RE = re.compile(r"^\s*AI(?P<slot>[12]):\s*(?P<name>.+?)\s*$", re.MULTILINE)
+WINNER_RE = re.compile(r"^\s*WINNER:\s*(?P<winner>\d+)\s*$", re.MULTILINE)
+STACKTRACE_CLASS_RE = re.compile(r"\bat\s+(?P<class>[a-zA-Z_][\w.$]*)\.[\w$<>]+\(")
 
 APPLY_MOVE_RE = re.compile(
     r"^\s*Applying LLM move:\s*(?P<raw_move>.+?)\s*\|\s*action_type=(?P<action_type>\w+)\s*\|\s*unit=\((?P<ux>-?\d+),(?P<uy>-?\d+)\)\s*type=(?P<unit_type>.+?)\s*$"
@@ -197,6 +200,85 @@ def parse_gameover(pre_text: str) -> bool | None:
     if not match:
         return None
     return match.group("value").lower() == "true"
+
+
+def parse_game_settings(log_text: str) -> dict[str, str]:
+    """
+    Parse AI1/AI2 definitions from the log header.
+    """
+    settings: dict[str, str] = {}
+    for match in GAME_SETTING_AI_RE.finditer(log_text):
+        settings[f"AI{match.group('slot')}"] = match.group("name").strip()
+    return settings
+
+
+def extract_declared_winner(log_text: str) -> str | None:
+    match = WINNER_RE.search(log_text)
+    if not match:
+        return None
+    return match.group("winner")
+
+
+def _class_name_variants(name: str) -> set[str]:
+    variants = {name.strip()}
+    short_name = name.strip().split(".")[-1]
+    variants.add(short_name)
+    return {variant for variant in variants if variant}
+
+
+def detect_crashed_ai_side(log_text: str, game_settings: dict[str, str]) -> str | None:
+    """
+    Infer which configured AI crashed from a Java stack trace.
+    Returns "0" for AI1/P0, "1" for AI2/P1, or None.
+    """
+    classes = {
+        match.group("class").split(".")[-1]
+        for match in STACKTRACE_CLASS_RE.finditer(log_text)
+    }
+    if not classes:
+        return None
+
+    ai1_variants = _class_name_variants(game_settings.get("AI1", ""))
+    ai2_variants = _class_name_variants(game_settings.get("AI2", ""))
+
+    if classes & ai1_variants:
+        return "0"
+    if classes & ai2_variants:
+        return "1"
+    return None
+
+
+def infer_winner(log_text: str, target_agent: str = "EAGLE") -> dict[str, Any]:
+    """
+    Determine the winner from an explicit WINNER line or from a crash trace.
+    """
+    game_settings = parse_game_settings(log_text)
+    declared_winner = extract_declared_winner(log_text)
+    crashed_side = detect_crashed_ai_side(log_text, game_settings)
+
+    inferred_winner = declared_winner
+    termination_reason = "winner_line" if declared_winner is not None else None
+
+    if inferred_winner is None and crashed_side is not None:
+        inferred_winner = "1" if crashed_side == "0" else "0"
+        termination_reason = "opponent_crash" if crashed_side == "1" else "self_crash"
+
+    target_side = None
+    target_variants = _class_name_variants(target_agent)
+    if game_settings:
+        if target_variants & _class_name_variants(game_settings.get("AI1", "")):
+            target_side = "0"
+        elif target_variants & _class_name_variants(game_settings.get("AI2", "")):
+            target_side = "1"
+
+    return {
+        "game_settings": game_settings,
+        "declared_winner": declared_winner,
+        "crashed_side": crashed_side,
+        "winner": inferred_winner,
+        "target_side": target_side,
+        "termination_reason": termination_reason,
+    }
 
 
 def normalize_llm_moves(raw_llm_json: dict[str, Any] | None) -> list[dict[str, Any]]:
@@ -434,9 +516,20 @@ def parse_log(log_text: str, target_agent: str = "EAGLE") -> dict[str, Any]:
         "applied_failure_count": sum(s["applied_failure_count"] for s in parsed_segments),
         "applied_success_count": sum(s["applied_success_count"] for s in parsed_segments),
     }
+    outcome = infer_winner(log_text, target_agent=target_agent)
+    summary.update(
+        {
+            "winner": outcome["winner"],
+            "declared_winner": outcome["declared_winner"],
+            "crashed_side": outcome["crashed_side"],
+            "target_side": outcome["target_side"],
+            "termination_reason": outcome["termination_reason"],
+        }
+    )
 
     return {
         "summary": summary,
+        "game_settings": outcome["game_settings"],
         "segments": parsed_segments,
         "all_move_results": all_moves,
     }

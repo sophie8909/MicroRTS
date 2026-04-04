@@ -28,6 +28,16 @@ class Evaluator:
         self.config = config or EAConfig()
         self.repo_root = Path(__file__).resolve().parents[2]
 
+    def _parse_winner_info(self, log_content: str) -> dict[str, Any]:
+        parsed_log = parse_log(log_content)
+        summary = parsed_log.get("summary", {})
+        return {
+            "parsed_log": parsed_log,
+            "winner": summary.get("winner"),
+            "target_side": summary.get("target_side"),
+            "termination_reason": summary.get("termination_reason"),
+        }
+
     def evaluate(
         self,
         individual: Individual,
@@ -201,17 +211,15 @@ class Evaluator:
 
         return fitness
 
-    def win_loss_evaluation(self, log_content: str) -> float:
+    def win_loss_evaluation(self, log_content: str, parsed_log: dict[str, Any] | None = None) -> float:
         # win = 1, loss = 0, draw = 0.5
         winning_score = 0.5  # Default to draw if no winner is found
-        # find "WINNER: " in the log content
-        for line in log_content.splitlines():
-            if "WINNER: " in line:
-                winner = line.split("WINNER: ")[1].strip()
-                if winner == "0":  # Assuming Player1 is our agent
-                    winning_score = 1.0  # Win
-                else:
-                    winning_score = 0.0  # Loss
+        winner_info = parsed_log or self._parse_winner_info(log_content)["parsed_log"]
+        summary = winner_info.get("summary", {})
+        winner = summary.get("winner")
+        target_side = summary.get("target_side")
+        if winner is not None and target_side is not None:
+            winning_score = 1.0 if str(winner) == str(target_side) else 0.0
         return winning_score
 
     def number_of_turns_evaluation(self, log_content: str) -> int:
@@ -228,9 +236,9 @@ class Evaluator:
         score = number_of_turns / 1000.0  # Normalize the score (assuming 1000 turns is a reasonable upper bound)
         return score
 
-    def calculate_fitness_score(self, log_content: str) -> list[float]:
-
-        winning_score = self.win_loss_evaluation(log_content)
+    def calculate_fitness_score(self, log_content: str, parsed_log: dict[str, Any] | None = None) -> list[float]:
+        winner_info = parsed_log or self._parse_winner_info(log_content)["parsed_log"]
+        winning_score = self.win_loss_evaluation(log_content, parsed_log=winner_info)
         number_of_turns_score = self.number_of_turns_evaluation(log_content)
         game_round_score = self.game_round_available_evaluation(log_content)  # This can be used as an additional metric if desired
 
@@ -294,10 +302,7 @@ class Evaluator:
         return Path(latest_log_file)
 
     def extract_winner(self, log_content: str) -> str | None:
-        for line in log_content.splitlines():
-            if "WINNER: " in line:
-                return line.split("WINNER: ", 1)[1].strip()
-        return None
+        return self._parse_winner_info(log_content)["winner"]
 
     def detect_timeout(self, log_content: str) -> bool:
         lower_content = log_content.lower()
@@ -345,10 +350,10 @@ class Evaluator:
             parsed_log = parse_log(log_content)
 
         # parse the log content to get the fitness score
-        fitness = self.calculate_fitness_score(log_content)
+        fitness = self.calculate_fitness_score(log_content, parsed_log=parsed_log)
         metadata = {
             "parsed_log": parsed_log,
-            "winner": self.extract_winner(log_content),
+            "winner": parsed_log.get("summary", {}).get("winner"),
             "timeout": self.detect_timeout(log_content),
             "log_path": str(latest_log_file),
             "llm_calls": parsed_log.get("summary", {}).get("segment_count", 0),
