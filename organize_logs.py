@@ -7,7 +7,7 @@ from pathlib import Path
 
 # Example: run_2026-03-27-00-00-32.log
 LOG_PATTERN = re.compile(
-    r"^run_(\d{4})-(\d{2})-(\d{2})-\d{2}-\d{2}-\d{2}\.log$"
+    r"^run_(\d{4})-(\d{2})-(\d{2})_\d{2}-\d{2}-\d{2}\.log$"
 )
 
 # Example: Response2026-03-31_13-57-48_LLM_Gemini_OneShot.json

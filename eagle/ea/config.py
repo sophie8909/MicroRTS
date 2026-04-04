@@ -9,10 +9,10 @@ from dataclasses import dataclass
 @dataclass
 class EAConfig:
     algorithm: str = "nsga2"  # Options: "ga", "nsga2", "moead"
-    population_size: int = 10  
-    num_generations: int = 30
+    population_size: int = 20  
+    num_generations: int = 50
     mutation_rate: float = 0.1
-    run_time_per_game_sec: int = 60
+    run_time_per_game_sec: int = 500
     real_eval_rate: float = 0.25
     tournament_size: int = 3
     selection_method: str = "random"  # Options: "random", "tournament"

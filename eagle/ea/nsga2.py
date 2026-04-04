@@ -345,6 +345,10 @@ class NSGA2(EA):
                             cnt += 1
                         if cnt >= self.config.population_size * self.config.real_eval_rate:  # We have evaluated enough offspring
                             break
+
+            # resort after real evaluation to update the fronts based on real fitness.
+            pareto_fronts = self._assign_rank_and_crowding(combined_population)
+
             # Environmental selection for the next generation.
             with timer("survivor_selection_time", generation_stats):
                 self.population = self.select_next_generation(self.population, offspring)

@@ -63,7 +63,7 @@ class Evaluator:
             self.save_prompt(prompt)
 
         if fitness_recorder is not None:
-            similar_records = fitness_recorder.find_history(prompt)
+            similar_records = fitness_recorder.find_history(prompt, opponent)
             if similar_records:
                 print(f"Found {len(similar_records)} similar records in history for the current prompt.")
                 for rec in similar_records:
@@ -84,7 +84,8 @@ class Evaluator:
                 with timer("surrogate_time", stats):
                     surrogate_score = self.surrogate_evaluation(prompt, 
                                                                 fitness_recorder=fitness_recorder)
-                    fitness = [surrogate_score] + individual.fitness[1:] if individual.fitness else [surrogate_score, 0.0, 0.0]
+                    power, uncertainty, simplicity, clarity = surrogate_score
+                    fitness = [power] + individual.fitness[1:] if individual.fitness else [surrogate_score, 0.0, 0.0]
             
             llm_calls = 1
 
@@ -378,7 +379,11 @@ class Evaluator:
 
         estimated_power, uncertainty, simplicity, clarity = surrogate_scores
 
+        print(f"Surrogate evaluation - Estimated Power: {estimated_power}, Uncertainty: {uncertainty}, Simplicity: {simplicity}, Clarity: {clarity}")
+
         adjusted_power = max(0.0, estimated_power * 0.8 - 0.3 * uncertainty)
+        
+        print(f"Adjusted Power after uncertainty penalty: {adjusted_power}")
 
         surrogate_scores = [adjusted_power, uncertainty, simplicity, clarity]
 

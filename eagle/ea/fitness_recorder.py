@@ -16,18 +16,37 @@ class FitnessRecorder:
         self.history_records_path =  "fitness_history.jsonl"
         self.history = []  
         self.config = config
+        self.init_from_history()
     
-    def init_from_history(self):
-        if Path(self.history_records_path).exists():
-            with open(self.history_records_path, "r", encoding="utf-8") as f:
-                self.history = [json.loads(line) for line in f]
-        else:
-            self.history = []
+    def init_from_history(self) -> None:
+        path = Path(self.history_records_path)
+        self.history: list[dict[str, Any]] = []
+
+        if not path.exists():
+            return
+
+        with path.open("r", encoding="utf-8") as f:
+            for line_no, line in enumerate(f, start=1):
+                line = line.strip()
+                if not line:
+                    continue
+
+                try:
+                    record = json.loads(line)
+                except json.JSONDecodeError as e:
+                    print(f"Warning: invalid JSON at line {line_no} in {path}: {e}")
+                    continue
+
+                if not isinstance(record, dict):
+                    print(f"Warning: line {line_no} is not a JSON object in {path}")
+                    continue
+
+                self.history.append(record)
     
     def add_history_record(self, record: dict[str, Any]):
         self.history.append(record)
-        with open(self.history_records_path, "w", encoding="utf-8") as f:
-            f.write("\n".join([json.dumps(r) for r in self.history]))
+        with Path(self.history_records_path).open("a", encoding="utf-8") as f:
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
     def turn_record_to_history(self, record: dict[str, Any]):
         # only keep prompt hash and fitness score for history record to save space.
@@ -35,16 +54,22 @@ class FitnessRecorder:
         history_record = {
             "prompt_hash": prompt_hash,
             "fitness_score": record["fitness_score"],
-            "max_run_time_sec": self.config.run_time_per_game_sec
+            "max_run_time_sec": self.config.run_time_per_game_sec,
+            "opponent": record.get("opponent"),
         }
         return history_record
 
-    def find_history(self, prompt: dict[str, Any]) -> list[dict[str, Any]]:
+    def find_history(self, prompt: dict[str, Any], opponent: str | None) -> list[dict[str, Any]]:
         # find similar prompt in history based on prompt hash. return the fitness score if found.
         prompt_hash = hash(json.dumps(prompt, sort_keys=True))
         similar_records = []
         for record in self.history:
-            if "prompt_hash" in record and record["prompt_hash"] == prompt_hash:
+            if (
+                "prompt_hash" in record
+                and record["prompt_hash"] == prompt_hash
+                and record["max_run_time_sec"] >= self.config.run_time_per_game_sec
+                and record.get("opponent") == opponent
+            ):
                 similar_records.append(record)
         return similar_records
 
