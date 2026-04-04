@@ -20,6 +20,8 @@ from .profiler import build_base_record, summarize_total_eval_time, timer, write
 from .fitness_recorder import FitnessRecorder
 from .fitness_utils import normalize_fitness
 
+
+
 class Evaluator:
     def __init__(self, component_pool: ComponentPool, config: EAConfig | None = None):
         self.component_pool = component_pool
@@ -50,6 +52,16 @@ class Evaluator:
         with timer("bookkeeping_time", stats):
             self.save_prompt(prompt)
 
+        if fitness_recorder is not None:
+            similar_records = fitness_recorder.find_history(prompt)
+            if similar_records:
+                print(f"Found {len(similar_records)} similar records in history for the current prompt.")
+                for rec in similar_records:
+                    print(f"Similar record fitness score: {rec.get('fitness_score')}")
+                real_eva = False  # Skip real evaluation if we found similar prompts in history to save time.
+                fitness = similar_records[random.randint(0, len(similar_records) - 1)].get("fitness_score", [0.0, 0.0, 0.0])  # Use the fitness score from a random similar record as a reference.
+            else:
+                print("No similar records found in history for the current prompt.")
         if real_eva:
             fitness, simulation_meta = self.simulate_games(opponent, stats)
             parsed_log = simulation_meta.get("parsed_log")
@@ -62,12 +74,12 @@ class Evaluator:
                 with timer("surrogate_time", stats):
                     surrogate_score = self.surrogate_evaluation(prompt, 
                                                                 fitness_recorder=fitness_recorder)
-                    fitness = surrogate_score
+                    fitness = [surrogate_score] + individual.fitness[1:] if individual.fitness else [surrogate_score, 0.0, 0.0, 0.0]
             
             llm_calls = 1
 
         fitness = normalize_fitness(fitness)
-        # print(fitness)
+        print(fitness)
 
         fitness_recorder.record_fitness(
             {

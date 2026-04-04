@@ -35,6 +35,14 @@ class FitnessRecorder:
         }
         return history_record
 
+    def find_history(self, prompt: dict[str, Any]) -> list[dict[str, Any]]:
+        # find similar prompt in history based on prompt hash. return the fitness score if found.
+        prompt_hash = hash(json.dumps(prompt, sort_keys=True))
+        similar_records = []
+        for record in self.history:
+            if "prompt_hash" in record and record["prompt_hash"] == prompt_hash:
+                similar_records.append(record)
+        return similar_records
 
     def record_fitness(self, record: dict[str, Any]):
         # Append the fitness evaluation record to a JSONL file for later analysis
